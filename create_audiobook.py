@@ -37,9 +37,9 @@ import time
 import os
 import subprocess
 
-input_dir = "OTRR_Box_13_Singles"
-artist = "Dan Holiday"
-album_title = "Box 13"
+input_dir = "OTRR_Words_At_War_Singles"
+artist = "Old Time Radio Researchers Group"
+album_title = "Words at War - Single Episodes"
 
 
 output_dir = "output"

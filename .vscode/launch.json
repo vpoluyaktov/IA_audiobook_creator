@@ -9,8 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["Old Time Radio"]
+            "console": "integratedTerminal"
         }
     ]
 }

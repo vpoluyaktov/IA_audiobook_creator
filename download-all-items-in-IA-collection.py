@@ -16,26 +16,33 @@ from internetarchive.session import ArchiveSession
 from internetarchive import get_item
 from internetarchive import download
 
-title =  "The Six Shooter - Single Episodes"
+search_condition =  "title:(Words at War - Single Episodes)"
 
 # Don't forget to run 'ia configure' in your terminal before first start
-search = ia.search_items('title:(%s)' % title)
+search = ia.search_items(search_condition)
 
-print(search.num_found)
+print("Found %s items" % search.num_found)
 
 num = 0
 
 for result in search: #for all items in a collection
     num = num + 1 #item count
     itemid = result['identifier']
-    print('Downloading: #' + str(num) + '\t' + itemid)
+    print('Downloading: item #' + str(num) + '\t' + itemid)
     try:
         download(itemid, verbose=True, glob_pattern='*.mp3|*.jpg')
-        print("\t\t Download success.")
+        print("\t\t Download success.\n\n")
     except Exception as e:
         print("Error Occurred downloading () = {}", format(itemid, e)) 
-    print("Pausing for 40 minutes")
-    time.sleep(2400) # IA restricts the number of things you can download. Be nice to 
-                     # their servers -- limit how much you download, too. For me, this
-                     # time restriction is still not polite enough, and my connection gets
-                     # cut off all the dang time.
+
+    if (num < search.num_found): 
+        print("Pausing for 40 minutes")
+        time.sleep(2400) # IA restricts the number of things you can download. Be nice to 
+                        # their servers -- limit how much you download, too. For me, this
+                        # time restriction is still not polite enough, and my connection gets
+                        # cut off all the dang time.
+
+
+
+# Audiobook creation: 
+# https://github.com/maschmann/convert-audiobook/blob/master/convert.py                     
