@@ -10,15 +10,16 @@
 # brew install gpac
 # brew install mp4chaps
 # brew install mp4v2
-# pip install mutagen
-# ?? brew install mutagen-io/mutagen/mutagen
 # brew install libmad
 # brew install mp3wrap
+# pip install mutagen
+# ?? brew install mutagen-io/mutagen/mutagen
 
 
 import os
 import time
 import sys
+import shutil
 import internetarchive as ia
 from requests.exceptions import HTTPError
 from datetime import timedelta
@@ -30,7 +31,6 @@ from mutagen.mp4 import MP4Cover
 import audioread
 import subprocess
 
-input_dir = "input"
 output_dir = "output"
 
 bitrate = '128'
@@ -83,7 +83,7 @@ while True:
 
         total_length = str(timedelta(seconds=int(total_length)))
         total_size = humanfriendly.format_size(total_size)
-        print("{}:\t{} ({} file(s), length: {}, size: {})".format(num, title, number_of_files, total_length, total_size))
+        print("{}:\t{} ({} file(s), duration: {}, size: {})".format(num, title, number_of_files, total_length, total_size))
 
     while True:
         item_number = input("Enter item number for download or 's' for new search: ")
@@ -104,30 +104,24 @@ while True:
 item_number = int(item_number)
 item = items[item_number]
 item_id = item.identifier
-title = item.item_metadata['metadata']['title']
+album_title = item.item_metadata['metadata']['title']
+album_description = item.item_metadata['metadata']['description']
 try:
-    artist = item.item_metadata['metadata']['artist']
+    album_artist = item.item_metadata['metadata']['artist']
 except Exception as e:
-    artist = 'Unknown Artist'
+    album_artist = 'Unknown Author'
+
+print("\n")
+album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
+album_artist = input("Audiobook Author [{}]: ".format(album_artist)) or album_artist
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(item_number, title, item.files_count))
 
-# clean/create input dir
-if (os.path.exists(input_dir)):
-    for i in os.listdir(input_dir):
-        os.remove(os.path.join(input_dir, i))
-    os.rmdir(input_dir)
-os.mkdir(input_dir)
-
 # clean/create output dir
 if (os.path.exists(output_dir)):
-    for i in os.listdir(output_dir):
-        os.remove(os.path.join(output_dir, i))
-    os.rmdir(output_dir)
+    shutil.rmtree(output_dir)
 os.mkdir(output_dir)
-
-# go to input dir
-os.chdir(input_dir)
+os.chdir(output_dir)
 
 try:
     ia.download(item_id, verbose=True, glob_pattern='*.mp3|*.jpg')
@@ -150,10 +144,11 @@ mp3_files = [filename for filename in os.listdir(".") if filename.endswith(".mp3
 mp3_files.sort()
 
 # wrap mp3
-subprocess.call(["mp3wrap"] + ["../../output/output.mp3"] + mp3_files)
+subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_files)
 
 # convert to aac
-ffmpeg = 'ffmpeg -i ../../output/output_MP3WRAP.mp3 -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../../output/output.aac'
+print("\nConverting MP3 to audiobook format...\nExpected duration of the book: {}".format(total_length))
+ffmpeg = 'ffmpeg -loglevel fatal -stats -i ../output_MP3WRAP.mp3 -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
@@ -177,7 +172,7 @@ def secs_to_hms(seconds):
 
     return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)
 
-chapters_file = open('../../output/chapters', 'w')
+chapters_file = open('../chapters', 'w')
 
 counter = 0
 time = 0
@@ -185,14 +180,8 @@ time = 0
 for filename in mp3_files:
     audio = MP3(filename, ID3=EasyID3)
     title = audio["title"][0]
-    audio = MP3(filename, ID3=EasyID3)
-    title = audio["title"][0]
     audio_file = audioread.audio_open(filename)
     length = audio_file.duration
-
-    if not artist:
-        artist = audio["artist"][0]
-        album_title = audio["album"][0]
 
     counter += 1
 
@@ -203,7 +192,7 @@ for filename in mp3_files:
 
 chapters_file.close()
 
-os.chdir("../../output")
+os.chdir("..")
 
 # add chapters
 subprocess.call(["MP4Box", "-add", "output.aac", "-chap", "chapters", "output.mp4"])
@@ -211,25 +200,27 @@ subprocess.call(["MP4Box", "-add", "output.aac", "-chap", "chapters", "output.mp
 # convert chapters to quicktime format
 subprocess.call(["mp4chaps", "--convert", "--chapter-qt", "output.mp4"])
 
-# clean up
-os.remove("chapters")
-os.remove("output.aac")
-os.remove("output_MP3WRAP.mp3")
-
 # create tags, rename file
 audio = MP4("output.mp4")
-audio["\xa9nam"] = [title]
-audio["\xa9ART"] = [artist]
+audio["\xa9nam"] = [album_title]
+audio["\xa9ART"] = [album_artist]
+audio["desc"] = [album_description]
 
 for cover in album_covers:
     image_type = 13
     if "png" in cover:
         image_type = 14
-    data = open("../"+cover, 'rb').read()
+    data = open(os.path.join(item_id, cover), 'rb').read()
     audio["covr"] = [MP4Cover(data, image_type)]
 
 audio.save()
 
-os.rename("output.mp4", "%s - %s.m4b" % (artist, title))
+os.rename("output.mp4", "%s - %s.m4b" % (album_artist, album_title))
+
+# clean up
+shutil.rmtree(item_id)
+os.remove("chapters")
+os.remove("output.aac")
+os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
