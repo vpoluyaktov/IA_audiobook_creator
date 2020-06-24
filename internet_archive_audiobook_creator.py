@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-## downloads audio files from Internet Archive collection and create a .m4b audiobook
-## Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
+# downloads audio files from Internet Archive collection and create a .m4b audiobook
+# Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
 # Requires: ffmpeg, MP4Box, mp4chaps, mutagen, libmad, mp3wrap
 
@@ -37,6 +37,7 @@ bitrate = '128'
 
 search_condition = ""
 items = {}
+
 search_max_items = 10
 item_number = None
 item = None
@@ -51,42 +52,73 @@ while True:
         continue
 
     # Don't forget to run 'ia configure' in your terminal before first start
-    search = ia.search_items("title:('{}') AND mediatype:(audio)".format(search_condition))
+    search = ia.search_items(
+        "title:('{}') AND mediatype:(audio)".format(search_condition))
 
     if (search.num_found == 0 or search.num_found > search_max_items):
-        print("{} items found. It's too many.\nTry to clarify the search condition".format(search.num_found))
+        print("{} items found. It's too many.\nTry to clarify the search condition".format(
+            search.num_found))
         continue
 
     print("{} items found:".format(search.num_found))
     print("===============================================================")
 
     num = 0
-    for result in search: # for all items 
-        num = num + 1 # item count
+    for result in search:  # for all items
+        num = num + 1  # item count
         item_id = result['identifier']
         item = ia.get_item(item_id)
-        items[num] = item
-        title = item.item_metadata['metadata']['title']
-        restricted = ''
-        try:
-            restricted = 'Restricted' if item.metadata['access-restricted-item'] else '' 
-        except Exception as ex:
+        item_title = item.item_metadata['metadata']['title']
+        if (item.metadata.get('access-restricted-item')):
+            restricted = 'Restricted'
+        else:
             restricted = ''
+    
         number_of_files = 0
         total_size = 0
         total_length = 0
+        mp3_files = []
+        album_covers = []
+        album_artist = ''
+        album_title = ''
+
+        # collect meta info for each file
         for file in item.files:
             if ('MP3' in file['format'].upper()):
                 number_of_files = number_of_files + 1
                 total_size = total_size + float(file['size'])
                 total_length = total_length + float(file['length'])
-
+                mp3_files.append(file['name'])
+            elif ('PNG' in file['format'].upper()
+                  or 'JPEG' in file['format'].upper()
+                  or 'JPG' in file['format'].upper()
+                  ):
+                album_covers.append(file['name'])
+            if (file.get('album') and album_title == ''):
+                album_title = file['album']
+            if (file.get('artist') and album_artist == ''):
+                album_artist = file['artist']
+                            
+        # convert duration and size to human frendly format
         total_length = str(timedelta(seconds=int(total_length)))
         total_size = humanfriendly.format_size(total_size)
-        print("{}:\t{} ({} file(s), duration: {}, size: {})".format(num, title, number_of_files, total_length, total_size))
+
+        items[num] = {}
+        items[num]['item'] = item
+        items[num]['total_length'] = total_length
+        items[num]['total_size'] = total_size
+        items[num]['number_of_files'] = number_of_files
+        items[num]['mp3_files'] = mp3_files
+        items[num]['album_covers'] = album_covers
+        items[num]['album_title'] = album_title
+        items[num]['album_artist'] = album_artist
+
+        print("{}:\t{} ({} file(s), duration: {}, size: {})".format(
+            num, item_title, number_of_files, total_length, total_size))
 
     while True:
-        item_number = input("Enter item number for download or 's' for new search: ")
+        item_number = input(
+            "Enter item number for download or 's' for new search: ")
         if (item_number == 's' or item_number == 'S'):
             item_number = None
             break
@@ -99,23 +131,32 @@ while True:
     if (item_number == None):
         continue
     else:
-        break        
-    
+        break
+
+# fetch the item metadata
 item_number = int(item_number)
-item = items[item_number]
+item = items[item_number]['item']
 item_id = item.identifier
-album_title = item.item_metadata['metadata']['title']
+mp3_files = items[item_number]['mp3_files']
+album_covers = items[item_number]['album_covers'] 
 album_description = item.item_metadata['metadata']['description']
-try:
+number_of_files = items[item_number]['number_of_files']
+total_length = items[item_number]['total_length']
+if (album_title == '' and item.item_metadata['metadata'].get('title')):
+    album_title = item.item_metadata['metadata']['title']
+if (album_artist == '' and item.item_metadata['metadata'].get('artist')):    
     album_artist = item.item_metadata['metadata']['artist']
-except Exception as e:
+if (album_artist == ''):
     album_artist = 'Unknown Author'
 
 print("\n")
+album_title = album_title.replace(' - Single Episodes', '')
 album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
-album_artist = input("Audiobook Author [{}]: ".format(album_artist)) or album_artist
+album_artist = input("Audiobook Author [{}]: ".format(
+    album_artist)) or album_artist
 
-print("\n\nDownloading item #{}:\t{} ({} files)".format(item_number, title, item.files_count))
+print("\n\nDownloading item #{}:\t{} ({} files)".format(
+    item_number, item_title, number_of_files))
 
 # clean/create output dir
 if (os.path.exists(output_dir)):
@@ -124,34 +165,31 @@ os.mkdir(output_dir)
 os.chdir(output_dir)
 
 try:
-    ia.download(item_id, verbose=True, glob_pattern='*.mp3|*.jpg')
+    ia.download(item_id, verbose=True, glob_pattern='*.mp3|*.jpg|*.jpeg|*.png')
     print("Download success.\n\n")
 except HTTPError as e:
     if e.response.status_code == 403:
-     print("Access to this file is restricted.\nExiting")     
+        print("Access to this file is restricted.\nExiting")
 except Exception as e:
-    print("Error Occurred downloading {}.\nExiting".format(e)) 
+    print("Error Occurred downloading {}.\nExiting".format(e))
 
 # go to download dir
 os.chdir(item_id)
 
-# check for cover file
-album_covers = [filename for filename in os.listdir(".") if filename.endswith(('.jpg', '.jpeg', '.png'))]
 album_covers.sort()
-
-# get mp3
-mp3_files = [filename for filename in os.listdir(".") if filename.endswith(".mp3")]
 mp3_files.sort()
 
 # wrap mp3
 subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_files)
 
 # convert to aac
-print("\nConverting MP3 to audiobook format...\nExpected duration of the book: {}".format(total_length))
+print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
 ffmpeg = 'ffmpeg -loglevel fatal -stats -i ../output_MP3WRAP.mp3 -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
+
+
 def secs_to_hms(seconds):
     h, m, s, ms = 0, 0, 0, 0
 
@@ -160,17 +198,17 @@ def secs_to_hms(seconds):
         seconds = int(splitted[0])
         ms = int(splitted[1])
 
-    m,s = divmod(seconds,60)
-    h,m = divmod(m,60)       
-
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
 
     ms = str(ms)
     try:
         ms = ms[0:3]
     except:
-        pass   
+        pass
 
     return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)
+
 
 chapters_file = open('../chapters', 'w')
 
@@ -179,7 +217,10 @@ time = 0
 
 for filename in mp3_files:
     audio = MP3(filename, ID3=EasyID3)
-    title = audio["title"][0]
+    try:
+        title = audio["title"][0]
+    except:
+        title = filename.replace('.mp3', '')
     audio_file = audioread.audio_open(filename)
     length = audio_file.duration
 
@@ -195,7 +236,8 @@ chapters_file.close()
 os.chdir("..")
 
 # add chapters
-subprocess.call(["MP4Box", "-add", "output.aac", "-chap", "chapters", "output.mp4"])
+subprocess.call(["MP4Box", "-add", "output.aac",
+                 "-chap", "chapters", "output.mp4"])
 
 # convert chapters to quicktime format
 subprocess.call(["mp4chaps", "--convert", "--chapter-qt", "output.mp4"])
