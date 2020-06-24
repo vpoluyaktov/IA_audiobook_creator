@@ -42,6 +42,45 @@ search_max_items = 10
 item_number = None
 item = None
 
+def secs_to_hms(seconds):
+    h, m, s, ms = 0, 0, 0, 0
+
+    if "." in str(seconds):
+        splitted = str(seconds).split(".")
+        seconds = int(splitted[0])
+        ms = int(splitted[1])
+
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+
+    ms = str(ms)
+    try:
+        ms = ms[0:3]
+    except:
+        pass
+
+    return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)
+
+def hms_to_sec(hms_string):
+    h, m, s, ms = 0, 0, 0, 0
+
+    if "." in str(hms_string):
+        splitted = str(hms_string).split(".")
+        seconds = int(splitted[0])
+        ms = int(splitted[1])
+
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+
+    ms = str(ms)
+    try:
+        ms = ms[0:3]
+    except:
+        pass
+
+    return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)    
+
+
 while True:
     search_condition = input("Enter search condition or 'x' to exit: ")
     if (search_condition == 'x'):
@@ -79,8 +118,14 @@ while True:
         total_length = 0
         mp3_files = []
         album_covers = []
-        album_artist = ''
-        album_title = ''
+        if (item.item_metadata['metadata'].get('title')):
+            album_title = item.item_metadata['metadata']['title']
+        else:
+            album_title = ''
+        if (item.item_metadata['metadata'].get('artist')):    
+            album_artist = item.item_metadata['metadata']['artist']
+        else: 
+            album_artist = ''
 
         # collect meta info for each file
         for file in item.files:
@@ -142,10 +187,8 @@ album_covers = items[item_number]['album_covers']
 album_description = item.item_metadata['metadata']['description']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
-if (album_title == '' and item.item_metadata['metadata'].get('title')):
-    album_title = item.item_metadata['metadata']['title']
-if (album_artist == '' and item.item_metadata['metadata'].get('artist')):    
-    album_artist = item.item_metadata['metadata']['artist']
+album_title = items[item_number]['album_title']
+album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
     album_artist = 'Unknown Author'
 
@@ -188,28 +231,6 @@ ffmpeg = 'ffmpeg -loglevel fatal -stats -i ../output_MP3WRAP.mp3 -y -vn -acodec 
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
-
-
-def secs_to_hms(seconds):
-    h, m, s, ms = 0, 0, 0, 0
-
-    if "." in str(seconds):
-        splitted = str(seconds).split(".")
-        seconds = int(splitted[0])
-        ms = int(splitted[1])
-
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-
-    ms = str(ms)
-    try:
-        ms = ms[0:3]
-    except:
-        pass
-
-    return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)
-
-
 chapters_file = open('../chapters', 'w')
 
 counter = 0
