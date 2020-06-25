@@ -91,8 +91,7 @@ while True:
         continue
 
     # Don't forget to run 'ia configure' in your terminal before first start
-    search = ia.search_items(
-        "title:('{}') AND mediatype:(audio)".format(search_condition))
+    search = ia.search_items("title:('{}') AND mediatype:(audio)".format(search_condition))
 
     if (search.num_found == 0 or search.num_found > search_max_items):
         print("{} items found. It's too many.\nTry to clarify the search condition".format(
@@ -124,6 +123,8 @@ while True:
             album_title = ''
         if (item.item_metadata['metadata'].get('artist')):    
             album_artist = item.item_metadata['metadata']['artist']
+        elif (item.item_metadata['metadata'].get('creator')):    
+            album_artist = item.item_metadata['metadata']['creator']
         else: 
             album_artist = ''
 
@@ -134,10 +135,7 @@ while True:
                 total_size = total_size + float(file['size'])
                 total_length = total_length + float(file['length'])
                 mp3_files.append(file['name'])
-            elif ('PNG' in file['format'].upper()
-                  or 'JPEG' in file['format'].upper()
-                  or 'JPG' in file['format'].upper()
-                  ):
+            elif ('JPEG' in file['format'].upper()):
                 album_covers.append(file['name'])
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
@@ -190,13 +188,12 @@ total_length = items[item_number]['total_length']
 album_title = items[item_number]['album_title']
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
-    album_artist = 'Unknown Author'
+    album_artist = 'Internet Archive'
 
 print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
 album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
-album_artist = input("Audiobook Author [{}]: ".format(
-    album_artist)) or album_artist
+album_artist = input("Audiobook Author [{}]: ".format(album_artist)) or album_artist
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
@@ -208,7 +205,7 @@ os.mkdir(output_dir)
 os.chdir(output_dir)
 
 try:
-    ia.download(item_id, verbose=True, glob_pattern='*.mp3|*.jpg|*.jpeg|*.png')
+    ia.download(item_id, verbose=True, formats=['VBR MP3', 'MP3', 'JPEG'])
     print("Download success.\n\n")
 except HTTPError as e:
     if e.response.status_code == 403:
@@ -268,6 +265,10 @@ audio = MP4("output.mp4")
 audio["\xa9nam"] = [album_title]
 audio["\xa9ART"] = [album_artist]
 audio["desc"] = [album_description]
+
+if (len(album_covers) == 0):
+    print("No cover image found for this item. Using default IA logo.")
+    album_covers.append('../../IA_logo.jpg')
 
 for cover in album_covers:
     image_type = 13
