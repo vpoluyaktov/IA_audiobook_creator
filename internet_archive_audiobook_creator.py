@@ -30,6 +30,7 @@ from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
 import audioread
 import subprocess
+import signal
 
 output_dir = "output"
 
@@ -38,9 +39,14 @@ bitrate = '128'
 search_condition = ""
 items = {}
 
-search_max_items = 10
+search_max_items = 25
 item_number = None
 item = None
+
+def signal_handler(sig, frame):
+    print('\nCtrl+C has been pressed. Exiting...')
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)    
 
 def secs_to_hms(seconds):
     h, m, s, ms = 0, 0, 0, 0
@@ -62,28 +68,18 @@ def secs_to_hms(seconds):
     return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)
 
 def hms_to_sec(hms_string):
-    h, m, s, ms = 0, 0, 0, 0
-
-    if "." in str(hms_string):
-        splitted = str(hms_string).split(".")
-        seconds = int(splitted[0])
-        ms = int(splitted[1])
-
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-
-    ms = str(ms)
-    try:
-        ms = ms[0:3]
-    except:
-        pass
-
-    return "%.2i:%.2i:%.2i.%s" % (h, m, s, ms)    
-
+    seconds= 0
+    for part in str(hms_string).split(':'):
+        seconds= seconds*60 + float(part)
+    return seconds
 
 while True:
-    search_condition = input("Enter search condition or 'x' to exit: ")
-    if (search_condition == 'x'):
+    try:
+        search_condition = input("Enter search condition or 'x' to exit: ")
+    except EOFError as e:
+        search_condition = ''
+
+    if (search_condition == 'x' or search_condition == 'X'):
         print("Bye")
         exit(0)
     if (len(search_condition) < 4):
@@ -93,7 +89,11 @@ while True:
     # Don't forget to run 'ia configure' in your terminal before first start
     search = ia.search_items("title:('{}') AND mediatype:(audio)".format(search_condition))
 
-    if (search.num_found == 0 or search.num_found > search_max_items):
+    if (search.num_found == 0):
+        print("Nothing found.\nTry to clarify the search condition")
+        continue
+
+    if (search.num_found > search_max_items):
         print("{} items found. It's too many.\nTry to clarify the search condition".format(
             search.num_found))
         continue
@@ -130,12 +130,12 @@ while True:
 
         # collect meta info for each file
         for file in item.files:
-            if ('MP3' in file['format'].upper()):
+            if (file['format'] == 'VBR MP3' or file['format'] == 'MP3'):
                 number_of_files = number_of_files + 1
                 total_size = total_size + float(file['size'])
-                total_length = total_length + float(file['length'])
+                total_length = total_length + hms_to_sec(file['length']) 
                 mp3_files.append(file['name'])
-            elif ('JPEG' in file['format'].upper()):
+            elif (file['format'] == 'JPEG' or file['format'] == 'JPEG Thumb'):
                 album_covers.append(file['name'])
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
@@ -143,7 +143,7 @@ while True:
                 album_artist = file['artist']
                             
         # convert duration and size to human frendly format
-        total_length = str(timedelta(seconds=int(total_length)))
+        total_length = secs_to_hms(total_length).split('.')[0]
         total_size = humanfriendly.format_size(total_size)
 
         items[num] = {}
@@ -160,8 +160,14 @@ while True:
             num, item_title, number_of_files, total_length, total_size))
 
     while True:
-        item_number = input(
-            "Enter item number for download or 's' for new search: ")
+        try:
+            item_number = input("Enter item number for download, 's' for new search or 'x' to exit: ")
+        except EOFError as e:
+            item_number = ''
+        
+        if (item_number == 'x' or item_number == 'X'):
+            print("Bye")
+            exit(0)    
         if (item_number == 's' or item_number == 'S'):
             item_number = None
             break
@@ -192,8 +198,15 @@ if (album_artist == ''):
 
 print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
-album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
-album_artist = input("Audiobook Author [{}]: ".format(album_artist)) or album_artist
+
+try:
+    album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
+except EOFError as e:
+    None
+try:
+    album_artist = input("Audiobook Author [{}]: ".format(album_artist)) or album_artist
+except EOFError as e:
+    None
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
@@ -205,7 +218,7 @@ os.mkdir(output_dir)
 os.chdir(output_dir)
 
 try:
-    ia.download(item_id, verbose=True, formats=['VBR MP3', 'MP3', 'JPEG'])
+    ia.download(item_id, verbose=True, formats=['VBR MP3', 'MP3', 'JPEG', 'JPEG Thumb'])
     print("Download success.\n\n")
 except HTTPError as e:
     if e.response.status_code == 403:
@@ -216,8 +229,8 @@ except Exception as e:
 # go to download dir
 os.chdir(item_id)
 
-album_covers.sort()
-mp3_files.sort()
+# album_covers.sort()
+# mp3_files.sort()
 
 # wrap mp3
 subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_files)
@@ -253,7 +266,7 @@ chapters_file.close()
 
 os.chdir("..")
 
-# add chapters
+# # add chapters
 subprocess.call(["MP4Box", "-add", "output.aac",
                  "-chap", "chapters", "output.mp4"])
 
@@ -266,16 +279,24 @@ audio["\xa9nam"] = [album_title]
 audio["\xa9ART"] = [album_artist]
 audio["desc"] = [album_description]
 
+# Find album cover
 if (len(album_covers) == 0):
     print("No cover image found for this item. Using default IA logo.")
     album_covers.append('../../IA_logo.jpg')
 
+# find biggest image
+album_cover = ''
+max_cover_size = 0
 for cover in album_covers:
-    image_type = 13
-    if "png" in cover:
-        image_type = 14
-    data = open(os.path.join(item_id, cover), 'rb').read()
-    audio["covr"] = [MP4Cover(data, image_type)]
+    cover_size = os.path.getsize(os.path.join(item_id, cover))
+    if (cover_size >= max_cover_size):
+        max_cover_size = cover_size
+        album_cover = cover
+
+# add album cover to the audiobook
+image_type = 13
+data = open(os.path.join(item_id, album_cover), 'rb').read()
+audio["covr"] = [MP4Cover(data, image_type)]
 
 audio.save()
 
