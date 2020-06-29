@@ -19,18 +19,18 @@
 import os
 import time
 import sys
+import subprocess
+import signal
+import requests
+from requests.exceptions import HTTPError
 import shutil
 import internetarchive as ia
-from requests.exceptions import HTTPError
-from datetime import timedelta
 import humanfriendly
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
 import audioread
-import subprocess
-import signal
 
 output_dir = "output"
 
@@ -130,12 +130,12 @@ while True:
 
         # collect meta info for each file
         for file in item.files:
-            if (file['format'] == 'VBR MP3' or file['format'] == 'MP3'):
+            if (file['format'] in ['VBR MP3', '64Kbps MP3', '128Kbps MP3']):
                 number_of_files = number_of_files + 1
                 total_size = total_size + float(file['size'])
                 total_length = total_length + hms_to_sec(file['length']) 
                 mp3_files.append(file['name'])
-            elif (file['format'] == 'JPEG' or file['format'] == 'JPEG Thumb'):
+            elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
@@ -218,7 +218,7 @@ os.mkdir(output_dir)
 os.chdir(output_dir)
 
 try:
-    ia.download(item_id, verbose=True, formats=['VBR MP3', 'MP3', 'JPEG', 'JPEG Thumb'])
+    ia.download(item_id, verbose=True, formats=['VBR MP3', '64Kbps MP3', '128Kbps MP3', 'JPEG', 'JPEG Thumb'])
     print("Download success.\n\n")
 except HTTPError as e:
     if e.response.status_code == 403:
@@ -282,7 +282,14 @@ audio["desc"] = [album_description]
 # Find album cover
 if (len(album_covers) == 0):
     print("No cover image found for this item. Using default IA logo.")
-    album_covers.append('../../IA_logo.jpg')
+    img_url = "https://archive.org/20/items/InternetArchiveLogo_201805/internet%20archive%20logo.jpg"
+    img_name = os.path.basename(img_url)
+    try:
+        request = requests.get(img_url, allow_redirects=True)
+        open(os.path.join(item_id, img_name), 'wb').write(request.content)
+        album_covers.append(img_name)
+    except Exception as e:
+        None
 
 # find biggest image
 album_cover = ''
@@ -300,7 +307,8 @@ audio["covr"] = [MP4Cover(data, image_type)]
 
 audio.save()
 
-os.rename("output.mp4", "%s - %s.m4b" % (album_artist, album_title))
+audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
+os.rename("output.mp4", audiobook_file_name)
 
 # clean up
 shutil.rmtree(item_id)
@@ -309,3 +317,5 @@ os.remove("output.aac")
 os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
+
+print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
