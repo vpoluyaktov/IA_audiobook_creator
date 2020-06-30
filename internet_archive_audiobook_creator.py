@@ -22,6 +22,7 @@ import sys
 import subprocess
 import signal
 import requests
+import re
 from requests.exceptions import HTTPError
 import shutil
 import internetarchive as ia
@@ -112,9 +113,6 @@ while True:
         else:
             restricted = ''
     
-        number_of_files = 0
-        total_size = 0
-        total_length = 0
         mp3_files = []
         album_covers = []
         if (item.item_metadata['metadata'].get('title')):
@@ -129,19 +127,44 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
+        format_list = ['64Kbps MP3', '128Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
-            if (file['format'] in ['VBR MP3', '64Kbps MP3', '128Kbps MP3']):
-                number_of_files = number_of_files + 1
-                total_size = total_size + float(file['size'])
-                total_length = total_length + hms_to_sec(file['length']) 
-                mp3_files.append(file['name'])
+            if (file['format'] in format_list):
+                # check if there is a file with the same title but different bitrate. Keep highest bitrate only
+                existing_file_index = 0
+                keep_existing_file = False
+                for existing_file in mp3_files:
+                    if (file['title'] == existing_file['title']):
+                        existing_file_priority = format_list.index(existing_file['format'])
+                        new_file_priority = format_list.index(file['format'])
+                        if (new_file_priority > existing_file_priority):
+                            # remove existing file from the list
+                            mp3_files.pop(existing_file_index)  
+                        else:
+                            keep_existing_file = True
+                        break    
+                    existing_file_index += 1   
+                if (not keep_existing_file):    
+                    mp3_files.append({'title': file['title'], 'file_name' : file['name'], 'format': file['format'], 'size': float(file['size']), 'length': hms_to_sec(file['length'])})
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
             if (file.get('artist') and album_artist == ''):
                 album_artist = file['artist']
-                            
+
+        # calculate item total size
+        total_size = 0.0                    
+        for file in mp3_files:
+            total_size += file['size']
+
+        # calculate item total length
+        total_length = 0.0                    
+        for file in mp3_files:
+            total_length += file['length']
+
+        number_of_files = len(mp3_files)    
+
         # convert duration and size to human frendly format
         total_length = secs_to_hms(total_length).split('.')[0]
         total_size = humanfriendly.format_size(total_size)
@@ -196,8 +219,10 @@ album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
     album_artist = 'Internet Archive'
 
+
 print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
+album_title = album_title.replace(album_artist + ' - ', '')
 
 try:
     album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
@@ -217,23 +242,50 @@ if (os.path.exists(output_dir)):
 os.mkdir(output_dir)
 os.chdir(output_dir)
 
-try:
-    ia.download(item_id, verbose=True, formats=['VBR MP3', '64Kbps MP3', '128Kbps MP3', 'JPEG', 'JPEG Thumb'])
-    print("Download success.\n\n")
-except HTTPError as e:
-    if e.response.status_code == 403:
-        print("Access to this file is restricted.\nExiting")
-except Exception as e:
-    print("Error Occurred downloading {}.\nExiting".format(e))
+# downloading mp3 files
+for file in mp3_files:
+    file_title = file['title']
+    file_name = file['file_name']
+    file_size = file['size']
+    try:
+        print("\t{} ({})...".format(file_title, humanfriendly.format_size(file_size)), end =" ")
+        result = ia.download(item_id, silent=True, files = file_name)
+        print("\t\tOK")
+    except HTTPError as e:
+        if e.response.status_code == 403:
+            print("Access to this file is restricted.\nExiting")
+    except Exception as e:
+        print("Error Occurred downloading {}.\nExiting".format(e))
+
+
+# downloading images       
+for file in album_covers:
+    file_name = file   
+    try:
+        print("\t{}...".format(file_name), end =" ")
+        result = ia.download(item_id, silent=True, files = file_name)
+        print("\t\tOK")
+    except HTTPError as e:
+        if e.response.status_code == 403:
+            print("Access to this file is restricted.\nExiting")
+    except Exception as e:
+        print("Error Occurred downloading {}.\nExiting".format(e))
+
 
 # go to download dir
+if (not os.path.exists(item_id)):
+    print("Nothing to do. Exiting...")
+    exit(1)
+
 os.chdir(item_id)
 
-# album_covers.sort()
-# mp3_files.sort()
+mp3_file_names = []
+for file in mp3_files:
+    mp3_file_names.append(file['file_name'])
+mp3_file_names.sort()
 
 # wrap mp3
-subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_files)
+subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_file_names)
 
 # convert to aac
 print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
@@ -246,7 +298,7 @@ chapters_file = open('../chapters', 'w')
 counter = 0
 time = 0
 
-for filename in mp3_files:
+for filename in mp3_file_names:
     audio = MP3(filename, ID3=EasyID3)
     try:
         title = audio["title"][0]
