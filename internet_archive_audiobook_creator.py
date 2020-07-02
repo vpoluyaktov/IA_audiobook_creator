@@ -133,6 +133,9 @@ while True:
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
                 existing_file_index = 0
                 keep_existing_file = False
+                if (not 'title' in file):
+                    file['title'] = file['name']
+
                 for existing_file in mp3_files:
                     if (file['title'] == existing_file['title']):
                         existing_file_priority = format_list.index(existing_file['format'])
@@ -302,6 +305,7 @@ for filename in mp3_file_names:
     audio = MP3(filename, ID3=EasyID3)
     try:
         title = audio["title"][0]
+        title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
     except:
         title = filename.replace('.mp3', '')
     audio_file = audioread.audio_open(filename)
@@ -333,15 +337,33 @@ audio["desc"] = [album_description]
 
 # Find album cover
 if (len(album_covers) == 0):
-    print("No cover image found for this item. Using default IA logo.")
-    img_url = "https://archive.org/20/items/InternetArchiveLogo_201805/internet%20archive%20logo.jpg"
-    img_name = os.path.basename(img_url)
-    try:
-        request = requests.get(img_url, allow_redirects=True)
-        open(os.path.join(item_id, img_name), 'wb').write(request.content)
-        album_covers.append(img_name)
-    except Exception as e:
-        None
+    print("\nNo cover image found for this item. Using default IA logo.")
+    while (True):
+        choice_number = input("You have two options:\n 1) Use default Internet Archive logo\n 2) Use some local picture file\n Your choice: ")
+
+        if (not choice_number.isnumeric() or int(choice_number) < 1 or int(choice_number) > 2):
+            print("Invalid choice number")
+            continue
+        else:
+            break
+
+    if (int(choice_number) == 1):
+        img_url = "https://archive.org/20/items/InternetArchiveLogo_201805/internet%20archive%20logo.jpg"
+        img_name = os.path.basename(img_url)
+        try:
+            request = requests.get(img_url, allow_redirects=True)
+            open(os.path.join(item_id, img_name), 'wb').write(request.content)
+            album_covers.append(img_name)
+        except Exception as e:
+            None
+    elif (int(choice_number) == 2):
+        while (True):
+            local_file_name = input("Enter full path to a picture file (.jpeg or .png): ")
+            if (any(re.findall(r'.jpg|.jpeg|.png', local_file_name, re.IGNORECASE)) and  os.path.isfile(local_file_name)):
+                break
+            else:
+                print("Can't opent the file: {}".format(local_file_name))
+        album_covers.append(local_file_name)
 
 # find biggest image
 album_cover = ''
@@ -353,7 +375,10 @@ for cover in album_covers:
         album_cover = cover
 
 # add album cover to the audiobook
-image_type = 13
+if ".PNG" in cover.upper():
+    image_type = 14
+else:
+    image_type = 13
 data = open(os.path.join(item_id, album_cover), 'rb').read()
 audio["covr"] = [MP4Cover(data, image_type)]
 
