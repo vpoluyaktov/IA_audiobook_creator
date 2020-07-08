@@ -127,7 +127,7 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['64Kbps MP3', '128Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -151,6 +151,8 @@ while True:
                     mp3_files.append({'title': file['title'], 'file_name' : file['name'], 'format': file['format'], 'size': float(file['size']), 'length': hms_to_sec(file['length'])})
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
+            elif ('MP3' in file['format']):
+                print("Skipping MP3 format: {}".format(file['format']))
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
             if (file.get('artist') and album_artist == ''):
@@ -240,9 +242,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+# if (os.path.exists(output_dir)):
+#     shutil.rmtree(output_dir)
+# os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -252,7 +254,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("\t{} ({})...".format(file_title, humanfriendly.format_size(file_size)), end =" ")
-        result = ia.download(item_id, silent=True, files = file_name)
+        # result = ia.download(item_id, silent=True, files = file_name)
         print("\t\tOK")
     except HTTPError as e:
         if e.response.status_code == 403:
@@ -286,6 +288,15 @@ mp3_file_names = []
 for file in mp3_files:
     mp3_file_names.append(file['file_name'])
 mp3_file_names.sort()
+
+mp3_list_file = open('mp3_files.txt', 'w')
+for file in mp3_file_names:
+    mp3_list_file.write("file '{}'\n".format(file))
+mp3_list_file.close()
+
+
+
+exit(0) 
 
 # wrap mp3
 subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_file_names)
