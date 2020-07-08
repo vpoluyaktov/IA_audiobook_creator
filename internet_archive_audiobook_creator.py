@@ -254,7 +254,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("\t{} ({})...".format(file_title, humanfriendly.format_size(file_size)), end =" ")
-        # result = ia.download(item_id, silent=True, files = file_name)
+        result = ia.download(item_id, silent=True, files = file_name)
         print("\t\tOK")
     except HTTPError as e:
         if e.response.status_code == 403:
@@ -289,14 +289,22 @@ for file in mp3_files:
     mp3_file_names.append(file['file_name'])
 mp3_file_names.sort()
 
-mp3_list_file = open('mp3_files.txt', 'w')
-for file in mp3_file_names:
-    mp3_list_file.write("file '{}'\n".format(file))
-mp3_list_file.close()
-
-# convert to aac
 print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
-ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i mp3_files.txt -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
+mts_list_file = open('mts_files.txt', 'w')
+for file_name in mp3_file_names:
+    base_file_name = file_name.replace('.mp3', '')
+    # convert each .mp3 file  to mts format first
+    print("{}".format(file_name))
+    os.system('ffmpeg -i "{}.mp3" -loglevel error -stats -y -vn -acodec copy "{}.mts"'.format(base_file_name, base_file_name))
+    mts_list_file.write("file '{}.mts'\n".format(base_file_name.replace("'","'\\''")))
+mts_list_file.close()
+
+# concatenate .mts files to a big one
+ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i mts_files.txt -y -c copy ../output.mts'
+subprocess.call(ffmpeg.split(" "))
+
+# convert .mts file to .aac
+ffmpeg = 'ffmpeg -i ../output.mts -y -vn -acodec copy -ab 128k -ar 44100 -f mp4 ../output.aac'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
@@ -369,7 +377,7 @@ if (len(album_covers) == 0):
                 print("Can't opent the file: {}".format(local_file_name))
         album_covers.append(local_file_name)
 
-# find biggest image
+# find biggest cover image
 album_cover = ''
 max_cover_size = 0
 for cover in album_covers:
@@ -392,10 +400,10 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-shutil.rmtree(item_id)
+#shutil.rmtree(item_id)
 os.remove("chapters")
+os.remove("output.mts")
 os.remove("output.aac")
-# os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
 
