@@ -294,16 +294,9 @@ for file in mp3_file_names:
     mp3_list_file.write("file '{}'\n".format(file))
 mp3_list_file.close()
 
-
-
-exit(0) 
-
-# wrap mp3
-subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_file_names)
-
 # convert to aac
 print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
-ffmpeg = 'ffmpeg -loglevel fatal -stats -i ../output_MP3WRAP.mp3 -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
+ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i mp3_files.txt -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
@@ -402,7 +395,7 @@ os.rename("output.mp4", audiobook_file_name)
 shutil.rmtree(item_id)
 os.remove("chapters")
 os.remove("output.aac")
-os.remove("output_MP3WRAP.mp3")
+# os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
 
