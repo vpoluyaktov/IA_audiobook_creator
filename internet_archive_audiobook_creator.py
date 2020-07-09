@@ -127,7 +127,7 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['24Kbps MP3', '32Kbps MP3', '48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -242,9 +242,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+# if (os.path.exists(output_dir)):
+#     shutil.rmtree(output_dir)
+# os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -392,9 +392,9 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-shutil.rmtree(item_id)
-os.remove("chapters")
-os.remove("output.aac")
+# shutil.rmtree(item_id)
+# os.remove("chapters")
+# os.remove("output.aac")
 
 os.chdir("..")
 
