@@ -127,7 +127,7 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['24Kbps MP3', '32Kbps MP3', '48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -289,14 +289,12 @@ for file in mp3_files:
     mp3_file_names.append(file['file_name'])
 mp3_file_names.sort()
 
-mp3_list_file = open('mp3_files.txt', 'w')
-for file in mp3_file_names:
-    mp3_list_file.write("file '{}'\n".format(file.replace("'", "'\\''")))
-mp3_list_file.close()
+# wrap mp3
+subprocess.call(["mp3wrap"] + ["../output.mp3"] + mp3_file_names)
 
 # convert to aac
 print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
-ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i mp3_files.txt -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
+ffmpeg = 'ffmpeg -loglevel fatal -stats -i ../output_MP3WRAP.mp3 -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
@@ -395,6 +393,7 @@ os.rename("output.mp4", audiobook_file_name)
 shutil.rmtree(item_id)
 os.remove("chapters")
 os.remove("output.aac")
+os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
 
