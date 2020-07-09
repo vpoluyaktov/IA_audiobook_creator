@@ -242,9 +242,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-# if (os.path.exists(output_dir)):
-#     shutil.rmtree(output_dir)
-# os.mkdir(output_dir)
+if (os.path.exists(output_dir)):
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -254,7 +254,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("\t{} ({})...".format(file_title, humanfriendly.format_size(file_size)), end =" ")
-        # result = ia.download(item_id, silent=True, files = file_name)
+        result = ia.download(item_id, silent=True, files = file_name)
         print("\t\tOK")
     except HTTPError as e:
         if e.response.status_code == 403:
@@ -291,7 +291,7 @@ mp3_file_names.sort()
 
 mp3_list_file = open('mp3_files.txt', 'w')
 for file in mp3_file_names:
-    mp3_list_file.write("file '{}'\n".format(file))
+    mp3_list_file.write("file '{}'\n".format(file.replace("'", "'\\''")))
 mp3_list_file.close()
 
 # convert to aac
@@ -395,7 +395,6 @@ os.rename("output.mp4", audiobook_file_name)
 shutil.rmtree(item_id)
 os.remove("chapters")
 os.remove("output.aac")
-# os.remove("output_MP3WRAP.mp3")
 
 os.chdir("..")
 
