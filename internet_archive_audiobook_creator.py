@@ -34,7 +34,8 @@ import audioread
 
 output_dir = "output"
 
-bitrate = '128'
+BITRATE = "128k"
+SAMPLE_RATE = "44100"
 
 search_condition = ""
 items = {}
@@ -295,7 +296,7 @@ mp3_list_file = open('mp3_files.txt', 'w')
 file_num = 1
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
-    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab 64k -ar 22050 "{}_re-encoded.mp3"'.format(file_name, file_name))
+    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} "{}_re-encoded.mp3"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     mp3_list_file.write("file '{}_re-encoded.mp3'\n".format(file_name.replace("'","'\\''")))
     file_num += 1
