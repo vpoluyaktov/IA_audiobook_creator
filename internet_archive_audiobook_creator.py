@@ -4,14 +4,13 @@
 # downloads audio files from Internet Archive collection and create a .m4b audiobook
 # Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
-# Requires: ffmpeg, MP4Box, mp4chaps, mutagen, libmad, mp3wrap
+# Requires: ffmpeg, MP4Box, mp4chaps, mutagen, libmad
 
 # brew install ffmpeg
 # brew install gpac
 # brew install mp4chaps
 # brew install mp4v2
 # brew install libmad
-# brew install mp3wrap
 # pip install mutagen
 # ?? brew install mutagen-io/mutagen/mutagen
 
@@ -242,20 +241,22 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-# if (os.path.exists(output_dir)):
-#     shutil.rmtree(output_dir)
-# os.mkdir(output_dir)
+if (os.path.exists(output_dir)):
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
+file_num = 1
 for file in mp3_files:
     file_title = file['title']
     file_name = file['file_name']
     file_size = file['size']
     try:
-        print("\t{} ({})...".format(file_title, humanfriendly.format_size(file_size)), end =" ")
+        print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
-        print("\t\tOK")
+        print("OK")
+        file_num += 1
     except HTTPError as e:
         if e.response.status_code == 403:
             print("Access to this file is restricted.\nExiting")
@@ -264,18 +265,18 @@ for file in mp3_files:
 
 
 # downloading images       
+print("\nDownloading album covers")
 for file in album_covers:
     file_name = file   
     try:
-        print("\t{}...".format(file_name), end =" ")
+        print("   {:76}".format(file_name + "..."), end =" ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
-        print("\t\tOK")
+        print("OK")
     except HTTPError as e:
         if e.response.status_code == 403:
             print("Access to this file is restricted.\nExiting")
     except Exception as e:
         print("Error Occurred downloading {}.\nExiting".format(e))
-
 
 # go to download dir
 if (not os.path.exists(item_id)):
@@ -286,33 +287,40 @@ os.chdir(item_id)
 
 mp3_file_names = []
 for file in mp3_files:
-    mp3_file_names.append(file['file_name'])
+    mp3_file_names.append(file['file_name'].replace('.mp3', ''))
 mp3_file_names.sort()
 
+print("\nRe-encoding .mp3 files to the same bitrate and the same sample rate...")
 mp3_list_file = open('mp3_files.txt', 'w')
-for file in mp3_file_names:
-    mp3_list_file.write("file '{}'\n".format(file.replace("'", "'\\''")))
+file_num = 1
+for file_name in mp3_file_names:
+    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
+    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab 64k -ar 22050 "{}_re-encoded.mp3"'.format(file_name, file_name))
+    print("OK")
+    mp3_list_file.write("file '{}_re-encoded.mp3'\n".format(file_name.replace("'","'\\''")))
+    file_num += 1
 mp3_list_file.close()
 
-# convert to aac
-print("\nConverting MP3 to audiobook format...\nEstimated duration of the book: {}".format(total_length))
-ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i mp3_files.txt -y -vn -acodec aac -ab 128k -ar 44100 -f mp4 ../output.aac'
+# concatenate .mts files to a big one
+print("\nCombining single .mp3 files into one...\nEstimated duration of the book: {}".format(total_length))
+ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i mp3_files.txt -y -acodec copy ../output.mp3'
 subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
+print("\nCreating audiobook chapters")
 chapters_file = open('../chapters', 'w')
 
 counter = 0
 time = 0
 
 for filename in mp3_file_names:
-    audio = MP3(filename, ID3=EasyID3)
+    audio = MP3(filename + '_re-encoded.mp3', ID3=EasyID3)
     try:
         title = audio["title"][0]
         title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
     except:
         title = filename.replace('.mp3', '')
-    audio_file = audioread.audio_open(filename)
+    audio_file = audioread.audio_open(filename + '_re-encoded.mp3')
     length = audio_file.duration
 
     counter += 1
@@ -326,9 +334,8 @@ chapters_file.close()
 
 os.chdir("..")
 
-# # add chapters
-subprocess.call(["MP4Box", "-add", "output.aac",
-                 "-chap", "chapters", "output.mp4"])
+# add chapters
+subprocess.call(["MP4Box", "-add", "output.mp3", "-chap", "chapters", "output.mp4"])
 
 # convert chapters to quicktime format
 subprocess.call(["mp4chaps", "--convert", "--chapter-qt", "output.mp4"])
@@ -340,6 +347,7 @@ audio["\xa9ART"] = [album_artist]
 audio["desc"] = [album_description]
 
 # Find album cover
+print("\nAdding audiobook cover image")
 if (len(album_covers) == 0):
     print("\nNo cover image found for this item. Using default IA logo.")
     while (True):
@@ -369,7 +377,7 @@ if (len(album_covers) == 0):
                 print("Can't opent the file: {}".format(local_file_name))
         album_covers.append(local_file_name)
 
-# find biggest image
+# find biggest cover image
 album_cover = ''
 max_cover_size = 0
 for cover in album_covers:
@@ -392,9 +400,9 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-# shutil.rmtree(item_id)
-# os.remove("chapters")
-# os.remove("output.aac")
+shutil.rmtree(item_id)
+os.remove("chapters")
+os.remove("output.mp3")
 
 os.chdir("..")
 
