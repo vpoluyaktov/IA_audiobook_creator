@@ -298,7 +298,7 @@ mp3_list_file = open('audio_files.txt', 'w')
 file_num = 1
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
-    #os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel info -stats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    # os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel error -nostats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     mp3_list_file.write("file '{}.aac'\n".format(file_name.replace("'","'\\''")))
     file_num += 1
@@ -337,9 +337,10 @@ for filename in mp3_file_names:
 
 chapters_file.close()
 
-# concatenate .mts files to a big one
+# concatenate .aac files into big .mp4 and attach chapter meta info
 print("\nCombining single .mp3 files into one...\nEstimated duration of the book: {}".format(total_length))
-command = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i audio_files.txt -i ../output.meta -map_metadata 1 -y -vn -acodec copy ../output.mp4'
+# command = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i audio_files.txt -i ../output.meta -map_metadata 1 -y -vn -acodec copy ../output.mp4'
+command = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i audio_files.txt -y -vn -acodec copy ../output.mp4'
 subprocess.call(command.split(" "))
 
 os.chdir("..")
