@@ -4,7 +4,7 @@
 # downloads audio files from Internet Archive collection and create a .m4b audiobook
 # Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
-# Requires: ffmpeg, MP4Box, mp4chaps, mutagen, libmad
+# Requires: ffmpeg, mutagen, libmad
 
 # brew install ffmpeg
 # brew install gpac
@@ -129,7 +129,7 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['24Kbps MP3', '32Kbps MP3', '48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['16Kbps MP3', '24Kbps MP3', '32Kbps MP3', '40Kbps MP3', '48Kbps MP3', '56Kbps MP3', '64Kbps MP3', '80Kbps MP3', '96Kbps MP3', '112Kbps MP3', '128Kbps MP3', '144Kbps MP3', '160Kbps MP3', '224Kbps MP3', '256Kbps MP3', '320Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -154,7 +154,7 @@ while True:
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
             elif ('MP3' in file['format']):
-                print("Skipping MP3 format: {}".format(file['format']))
+                print("Skipping unknown MP3 format: {}".format(file['format']))
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
             if (file.get('artist') and album_artist == ''):
@@ -290,7 +290,7 @@ os.chdir(item_id)
 
 mp3_file_names = []
 for file in mp3_files:
-    mp3_file_names.append(file['file_name'].replace('.mp3', ''))
+    mp3_file_names.append(re.sub('.mp3', '', file['file_name'], flags=re.IGNORECASE))
 mp3_file_names.sort()
 
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
