@@ -4,7 +4,7 @@
 # downloads audio files from Internet Archive collection and create a .m4b audiobook
 # Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
-# Requires: ffmpeg, MP4Box, mp4chaps, mutagen, libmad
+# Requires: ffmpeg, mutagen, libmad
 
 # brew install ffmpeg
 # brew install gpac
@@ -29,6 +29,7 @@ import humanfriendly
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
+from mutagen.aac import AAC
 from mutagen.mp4 import MP4Cover
 import audioread
 
@@ -36,6 +37,7 @@ output_dir = "output"
 
 BITRATE = "128k"
 SAMPLE_RATE = "44100"
+BIT_DEPTH = "s16"
 
 search_condition = ""
 items = {}
@@ -127,7 +129,7 @@ while True:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['24Kbps MP3', '32Kbps MP3', '48Kbps MP3', '64Kbps MP3', '128Kbps MP3', '256Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['16Kbps MP3', '24Kbps MP3', '32Kbps MP3', '40Kbps MP3', '48Kbps MP3', '56Kbps MP3', '64Kbps MP3', '80Kbps MP3', '96Kbps MP3', '112Kbps MP3', '128Kbps MP3', '144Kbps MP3', '160Kbps MP3', '224Kbps MP3', '256Kbps MP3', '320Kbps MP3', 'VBR MP3'] # format list ranged by priority 
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -152,7 +154,7 @@ while True:
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
             elif ('MP3' in file['format']):
-                print("Skipping MP3 format: {}".format(file['format']))
+                print("Skipping unknown MP3 format: {}".format(file['format']))
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
             if (file.get('artist') and album_artist == ''):
@@ -244,7 +246,7 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
 # clean/create output dir
 if (os.path.exists(output_dir)):
     shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+    os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -270,7 +272,7 @@ print("\nDownloading album covers")
 for file in album_covers:
     file_name = file   
     try:
-        print("   {:76}".format(file_name + "..."), end =" ", flush=True)
+        print("    {:74}".format(file_name + "..."), end =" ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
     except HTTPError as e:
@@ -288,58 +290,66 @@ os.chdir(item_id)
 
 mp3_file_names = []
 for file in mp3_files:
-    mp3_file_names.append(file['file_name'].replace('.mp3', ''))
+    mp3_file_names.append(re.sub('.mp3', '', file['file_name'], flags=re.IGNORECASE))
 mp3_file_names.sort()
 
-print("\nRe-encoding .mp3 files to the same bitrate and the same sample rate...")
-mp3_list_file = open('mp3_files.txt', 'w')
+print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
+mp3_list_file = open('audio_files.txt', 'w')
 file_num = 1
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
-    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} "{}_re-encoded.mp3"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
-    mp3_list_file.write("file '{}_re-encoded.mp3'\n".format(file_name.replace("'","'\\''")))
+    mp3_list_file.write("file '{}.aac'\n".format(file_name.replace("'","'\\''")))
     file_num += 1
 mp3_list_file.close()
 
-# concatenate .mts files to a big one
-print("\nCombining single .mp3 files into one...\nEstimated duration of the book: {}".format(total_length))
-ffmpeg = 'ffmpeg -f concat -safe 0 -loglevel error -stats -i mp3_files.txt -y -acodec copy ../output.mp3'
-subprocess.call(ffmpeg.split(" "))
 
 # create chapters file
 print("\nCreating audiobook chapters")
-chapters_file = open('../chapters', 'w')
+chapters_file = open('../output.meta', 'w')
+chapters_file.write(";FFMETADATA1\n")
+chapters_file.write("major_brand=isom\n")
+chapters_file.write("minor_version=1\n")
+chapters_file.write("compatible_brands=isom\n")
+chapters_file.write("encoder=Lavf58.20.100\n")
 
-counter = 0
+counter = 1
 time = 0
-
 for filename in mp3_file_names:
-    audio = MP3(filename + '_re-encoded.mp3', ID3=EasyID3)
+    mp3 = MP3(filename + '.mp3', ID3=EasyID3)
+    aac = AAC(filename + '.aac')
     try:
-        title = audio["title"][0]
+        title = mp3["title"][0]
         title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
     except:
         title = filename.replace('.mp3', '')
-    audio_file = audioread.audio_open(filename + '_re-encoded.mp3')
+    audio_file = audioread.audio_open(filename + '.aac')
     length = audio_file.duration
 
-    counter += 1
-
-    chapters_file.write("CHAPTER%i=%s\n" % (counter, secs_to_hms(time)))
-    chapters_file.write("CHAPTER%iNAME=%s\n" % (counter, title))
-
+    
+    chapters_file.write("[CHAPTER]\n")
+    chapters_file.write("TIMEBASE=1/1\n")
+    chapters_file.write("START={}\n".format(time))
+    chapters_file.write("END={}\n".format(time + length))
+    chapters_file.write("title={}\n".format(title))
     time += length
+
+    print("Chapter #{}: {}".format(counter, title))
+    counter += 1
 
 chapters_file.close()
 
+# concatenate .aac files into big .mp4 and attach chapter meta info
+print("\nCombining single .mp3 files into one...\nEstimated duration of the book: {}".format(total_length))
+command = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -acodec copy ../output.aac'
+subprocess.call(command.split(" "))
+
+print("\nConverting .mp3 to audiobook format...")
+command = 'ffmpeg -loglevel fatal -stats -i ../output.aac -i ../output.meta -map_metadata 1 -y -vn -acodec copy ../output.mp4'
+subprocess.call(command.split(" "))
+
 os.chdir("..")
-
-# add chapters
-subprocess.call(["MP4Box", "-add", "output.mp3", "-chap", "chapters", "output.mp4"])
-
-# convert chapters to quicktime format
-subprocess.call(["mp4chaps", "--convert", "--chapter-qt", "output.mp4"])
 
 # create tags, rename file
 audio = MP4("output.mp4")
@@ -402,8 +412,8 @@ os.rename("output.mp4", audiobook_file_name)
 
 # clean up
 shutil.rmtree(item_id)
-os.remove("chapters")
-os.remove("output.mp3")
+os.remove("output.meta")
+os.remove("output.aac")
 
 os.chdir("..")
 
