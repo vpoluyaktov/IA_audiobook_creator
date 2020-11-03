@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 
 # downloads audio files from Internet Archive collection and create a .m4b audiobook
