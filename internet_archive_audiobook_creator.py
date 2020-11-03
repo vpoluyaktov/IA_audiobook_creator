@@ -4,16 +4,23 @@
 # downloads audio files from Internet Archive collection and create a .m4b audiobook
 # Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
-# Requires: ffmpeg, mutagen, libmad
+# REQUIREMENTS:
+# pip install internetarchive
+# pip install humanfriendly
+# pip install mutagen
+# pip install audioread
 
+# Linux (debian/ubuntu)
+# sudo apt-get install ffmpeg
+# sudo apt-get install internetarchive
+# ia configure (enter you archive.org username and password)
+
+# MacOS:
 # brew install ffmpeg
 # brew install gpac
 # brew install mp4chaps
 # brew install mp4v2
 # brew install libmad
-# pip install mutagen
-# ?? brew install mutagen-io/mutagen/mutagen
-
 
 import os
 import time
