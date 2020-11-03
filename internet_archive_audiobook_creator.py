@@ -253,7 +253,7 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
 # clean/create output dir
 if (os.path.exists(output_dir)):
     shutil.rmtree(output_dir)
-    os.mkdir(output_dir)
+os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
