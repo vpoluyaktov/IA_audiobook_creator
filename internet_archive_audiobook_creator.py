@@ -251,9 +251,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+# if (os.path.exists(output_dir)):
+#     shutil.rmtree(output_dir)
+# os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -264,7 +264,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        # result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_num += 1
     except HTTPError as e:
@@ -305,7 +305,7 @@ mp3_list_file = open('audio_files.txt', 'w')
 file_num = 1
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
-    os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    # os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     mp3_list_file.write("file '{}.aac'\n".format(file_name.replace("'","'\\''")))
     file_num += 1
@@ -331,6 +331,7 @@ for filename in mp3_file_names:
         title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
     except:
         title = filename.replace('.mp3', '')
+    title = title.strip();
     audio_file = audioread.audio_open(filename + '.aac')
     length = audio_file.duration
 
@@ -342,7 +343,7 @@ for filename in mp3_file_names:
     chapters_file.write("title={}\n".format(title))
     time += length
 
-    print("Chapter #{}: {}".format(counter, title))
+    print("Chapter {:>3} ({}): {}".format(counter, secs_to_hms(length).split('.')[0], title))
     counter += 1
 
 chapters_file.close()
@@ -418,9 +419,9 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-shutil.rmtree(item_id)
-os.remove("output.meta")
-os.remove("output.aac")
+# shutil.rmtree(item_id)
+# os.remove("output.meta")
+# os.remove("output.aac")
 
 os.chdir("..")
 
