@@ -294,20 +294,21 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
+# os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
-    mp3_file_names.append(re.sub('.mp3', '', file['file_name'], flags=re.IGNORECASE))
+    mp3_file_names.append(file['file_name'])
 mp3_file_names.sort()
 
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 mp3_list_file = open('audio_files.txt', 'w')
 file_num = 1
 for file_name in mp3_file_names:
-    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '.mp3...'), end = " ", flush=True)
-    # os.system('ffmpeg -i "{}.mp3" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn -acodec aac "{}.aac"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
+    # os.system('ffmpeg -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
-    mp3_list_file.write("file '{}.aac'\n".format(file_name.replace("'","'\\''")))
+    mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
     file_num += 1
 mp3_list_file.close()
 
@@ -324,16 +325,14 @@ chapters_file.write("encoder=Lavf58.20.100\n")
 counter = 1
 time = 0
 for filename in mp3_file_names:
-    mp3 = MP3(filename + '.mp3', ID3=EasyID3)
-    aac = AAC(filename + '.aac')
+    mp3 = MP3('resampled/' + filename , ID3=EasyID3)
     try:
         title = mp3["title"][0]
         title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
     except:
         title = filename.replace('.mp3', '')
     title = title.strip();
-    audio_file = audioread.audio_open(filename + '.aac')
-    length = audio_file.duration
+    length = mp3.info.length
 
     
     chapters_file.write("[CHAPTER]\n")
@@ -348,9 +347,9 @@ for filename in mp3_file_names:
 
 chapters_file.close()
 
-# concatenate .aac files into big .mp4 and attach chapter meta info
-print("\nCombining single .mp3 files into one...\nEstimated duration of the book: {}".format(total_length))
-command = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -acodec copy ../output.aac'
+# concatenate .mp3 files into big .mp3 and attach chapter meta info
+print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(total_length))
+command = 'ffmpeg -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -ab {} -ar {} -acodec aac ../output.aac'.format(BITRATE, SAMPLE_RATE)
 subprocess.call(command.split(" "))
 
 print("\nConverting .mp3 to audiobook format...")
@@ -421,7 +420,7 @@ os.rename("output.mp4", audiobook_file_name)
 # clean up
 # shutil.rmtree(item_id)
 # os.remove("output.meta")
-# os.remove("output.aac")
+# os.remove("output.mp3")
 
 os.chdir("..")
 
