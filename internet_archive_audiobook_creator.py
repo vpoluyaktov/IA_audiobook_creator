@@ -36,15 +36,14 @@ import humanfriendly
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
-from mutagen.aac import AAC
 from mutagen.mp4 import MP4Cover
-import audioread
 
 output_dir = "output"
 
 BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
+GAP_DURATION = 5 # Duration of a gaps between chapters
 
 search_condition = ""
 items = {}
@@ -251,9 +250,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-# if (os.path.exists(output_dir)):
-#     shutil.rmtree(output_dir)
-# os.mkdir(output_dir)
+if (os.path.exists(output_dir)):
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading mp3 files
@@ -264,7 +263,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        # result = ia.download(item_id, silent=True, files = file_name)
+        result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_num += 1
     except HTTPError as e:
@@ -294,21 +293,28 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-# os.mkdir('resampled')
+os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
     mp3_file_names.append(file['file_name'])
 mp3_file_names.sort()
 
+# generated silence .mp3 to fill gaps between chapters
+os.system('ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
+os.system('ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
+
+
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 mp3_list_file = open('audio_files.txt', 'w')
 file_num = 1
+mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    # os.system('ffmpeg -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    os.system('ffmpeg -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
+    mp3_list_file.write("file 'resampled/gap.mp3'\n")
     file_num += 1
 mp3_list_file.close()
 
@@ -323,7 +329,7 @@ chapters_file.write("compatible_brands=isom\n")
 chapters_file.write("encoder=Lavf58.20.100\n")
 
 counter = 1
-time = 0
+chapter_start_time = 0
 for filename in mp3_file_names:
     mp3 = MP3('resampled/' + filename , ID3=EasyID3)
     try:
@@ -333,14 +339,15 @@ for filename in mp3_file_names:
         title = filename.replace('.mp3', '')
     title = title.strip();
     length = mp3.info.length
-
+    chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 1% adjustment 
     
     chapters_file.write("[CHAPTER]\n")
-    chapters_file.write("TIMEBASE=1/1\n")
-    chapters_file.write("START={}\n".format(time))
-    chapters_file.write("END={}\n".format(time + length))
+    chapters_file.write("TIMEBASE=1/1000\n")
+    chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
+    chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
     chapters_file.write("title={}\n".format(title))
-    time += length
+
+    chapter_start_time = chapter_end_time
 
     print("Chapter {:>3} ({}): {}".format(counter, secs_to_hms(length).split('.')[0], title))
     counter += 1
@@ -418,9 +425,9 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-# shutil.rmtree(item_id)
-# os.remove("output.meta")
-# os.remove("output.mp3")
+shutil.rmtree(item_id)
+os.remove("output.meta")
+os.remove("output.mp3")
 
 os.chdir("..")
 
