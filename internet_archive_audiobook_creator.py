@@ -339,7 +339,7 @@ for filename in mp3_file_names:
         title = filename.replace('.mp3', '')
     title = title.strip();
     length = mp3.info.length
-    chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 1% adjustment 
+    chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
     
     chapters_file.write("[CHAPTER]\n")
     chapters_file.write("TIMEBASE=1/1000\n")
@@ -427,7 +427,7 @@ os.rename("output.mp4", audiobook_file_name)
 # clean up
 shutil.rmtree(item_id)
 os.remove("output.meta")
-os.remove("output.acc")
+os.remove("output.aac")
 
 os.chdir("..")
 
