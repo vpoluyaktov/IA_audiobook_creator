@@ -427,7 +427,7 @@ os.rename("output.mp4", audiobook_file_name)
 # clean up
 shutil.rmtree(item_id)
 os.remove("output.meta")
-os.remove("output.mp3")
+os.remove("output.acc")
 
 os.chdir("..")
 
