@@ -44,6 +44,7 @@ BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
 GAP_DURATION = 5 # Duration of a gaps between chapters
+part_size = 134217728 # default audiobook part size = 1 Gb
 
 search_condition = ""
 items = {}
@@ -227,6 +228,7 @@ album_covers = items[item_number]['album_covers']
 album_description = item.item_metadata['metadata']['description']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
+total_size = items[item_number]['total_size']
 album_title = items[item_number]['album_title']
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
@@ -236,6 +238,7 @@ if (album_artist == ''):
 print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
 album_title = album_title.replace(album_artist + ' - ', '')
+album_artist = album_artist.replace('Old Time Radio Researchers Group', 'OTRR')
 
 try:
     album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
@@ -246,14 +249,23 @@ try:
 except EOFError as e:
     None
 
+if (total_size > part_size ):
+    number_of_parts = math.ceil(total_size / part_size) 
+    human_part_size =
+    human_total_size = 
+ 
+    try:
+        part_size = input("The audiobook total size ({}) is bigger than default single part size ({}), so the book will be split into {} parts.".format()) 
+
+
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
-os.chdir(output_dir)
+#if (os.path.exists(output_dir)):
+#    shutil.rmtree(output_dir)
+#os.mkdir(output_dir)
+#os.chdir(output_dir)
 
 # downloading mp3 files
 file_num = 1
@@ -263,7 +275,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+#        result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_num += 1
     except HTTPError as e:
@@ -311,7 +323,7 @@ file_num = 1
 mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+#    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
     mp3_list_file.write("file 'resampled/gap.mp3'\n")
@@ -425,9 +437,9 @@ audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
 os.rename("output.mp4", audiobook_file_name)
 
 # clean up
-shutil.rmtree(item_id)
-os.remove("output.meta")
-os.remove("output.aac")
+#shutil.rmtree(item_id)
+#os.remove("output.meta")
+#os.remove("output.aac")
 
 os.chdir("..")
 
