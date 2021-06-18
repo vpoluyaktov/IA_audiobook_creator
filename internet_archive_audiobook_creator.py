@@ -24,6 +24,7 @@
 
 import os
 import time
+import math
 import sys
 import subprocess
 import signal
@@ -33,6 +34,7 @@ from requests.exceptions import HTTPError
 import shutil
 import internetarchive as ia
 import humanfriendly
+import humanfriendly.prompts
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
@@ -44,7 +46,7 @@ BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
 GAP_DURATION = 5 # Duration of a gaps between chapters
-part_size = 134217728 # default audiobook part size = 1 Gb
+part_size_human = "1 GB" # default audiobook part size
 
 search_condition = ""
 items = {}
@@ -180,13 +182,15 @@ while True:
         number_of_files = len(mp3_files)    
 
         # convert duration and size to human frendly format
-        total_length = secs_to_hms(total_length).split('.')[0]
-        total_size = humanfriendly.format_size(total_size)
+        total_length_human = secs_to_hms(total_length).split('.')[0]
+        total_size_human = humanfriendly.format_size(total_size)
 
         items[num] = {}
         items[num]['item'] = item
         items[num]['total_length'] = total_length
+        items[num]['total_length_human'] = total_length_human
         items[num]['total_size'] = total_size
+        items[num]['total_size_human'] = total_size_human
         items[num]['number_of_files'] = number_of_files
         items[num]['mp3_files'] = mp3_files
         items[num]['album_covers'] = album_covers
@@ -194,7 +198,7 @@ while True:
         items[num]['album_artist'] = album_artist
 
         print("{}:\t{} ({} file(s), duration: {}, size: {})".format(
-            num, item_title, number_of_files, total_length, total_size))
+            num, item_title, number_of_files, total_length_human, total_size_human))
 
     while True:
         try:
@@ -228,7 +232,9 @@ album_covers = items[item_number]['album_covers']
 album_description = item.item_metadata['metadata']['description']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
+total_length_human = items[item_number]['total_length_human']
 total_size = items[item_number]['total_size']
+total_size_human = items[item_number]['total_size_human']
 album_title = items[item_number]['album_title']
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
@@ -249,13 +255,21 @@ try:
 except EOFError as e:
     None
 
+part_size = humanfriendly.parse_size(part_size_human)
 if (total_size > part_size ):
-    number_of_parts = math.ceil(total_size / part_size) 
-    human_part_size =
-    human_total_size = 
- 
-    try:
-        part_size = input("The audiobook total size ({}) is bigger than default single part size ({}), so the book will be split into {} parts.".format()) 
+    while True:
+        try:
+            number_of_parts = math.ceil(total_size / part_size) 
+            print("\nThe audiobook total size ({}) is bigger than default single part size ({}), so the book will be split into {} parts."
+                .format(total_size_human, part_size_human, number_of_parts)) 
+            if (humanfriendly.prompts.prompt_for_confirmation("Would you like to change default part size?", default=False)):
+                part_size_human = input("Enter new part size (Mb, Gb): ")
+                part_size = humanfriendly.parse_size(part_size_human)
+                part_size_human = humanfriendly.format_size(part_size) # reformat user input
+            else:
+                break       
+        except humanfriendly.InvalidSize as e:
+            print("ERROR: Wrong size specified. You can say for ex: 2 Gb, 0.5 Gb, 256 Mb, etc.")
 
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
@@ -367,7 +381,7 @@ for filename in mp3_file_names:
 chapters_file.close()
 
 # concatenate .mp3 files into big .mp3 and attach chapter meta info
-print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(total_length))
+print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(total_length_human))
 command = 'ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -ab {} -ar {} -acodec aac ../output.aac'.format(BITRATE, SAMPLE_RATE)
 subprocess.call(command.split(" "))
 
