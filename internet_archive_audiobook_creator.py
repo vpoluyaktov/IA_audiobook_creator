@@ -317,7 +317,7 @@ for file in album_covers:
     file_name = file   
     try:
         print("    {:74}".format(file_name + "..."), end =" ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        #result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
     except HTTPError as e:
         if e.response.status_code == 403:
@@ -344,7 +344,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        # result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_num += 1
     except HTTPError as e:
@@ -383,7 +383,7 @@ total_size = 0
 current_part_size = 0
 file_num = 1
 part_number = 1
-audiobook_parts = []
+audiobook_parts = {}
 part_audio_files = []
 
 for file_name in mp3_file_names:
@@ -392,7 +392,7 @@ for file_name in mp3_file_names:
     current_part_size += file_size
     total_size += file_size
 
-    if file_num == mp3_list_file.size or current_part_size >= part_size:
+    if file_num == len(mp3_file_names) or current_part_size >= part_size:
         # we have collected anought files for the audiobook part. 
         # save the part mp3 list to a file
         mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
@@ -410,6 +410,7 @@ for file_name in mp3_file_names:
         
         part_number += 1
         current_part_size = 0
+        part_audio_files = []
     file_num += 1
 mp3_list_file.close()
 
@@ -422,8 +423,8 @@ if number_of_parts > 1:
 print("\nCreating audiobook chapters")
 part_number = 1
 for audiobook_part in audiobook_parts:
-    if audiobook_parts.size > 1:
-        print("\n{}. Part {:>3} ({}): {}".format(album_title, part_number))
+    if len(audiobook_parts) > 1:
+        print("\n{}. Part {}".format(album_title, part_number))
         print("---------------------------------------------------------")
     chapters_file_name = "../chapters.part{:0>3}".format(part_number)
     chapters_file = open(chapters_file_name, 'w')
@@ -437,7 +438,8 @@ for audiobook_part in audiobook_parts:
     chapter_start_time = 0
     total_part_size = 0
     total_part_length = 0
-    for filename in mp3_file_names:
+    part_audio_files = audiobook_parts[part_number]['mp3_file_names']
+    for filename in part_audio_files:
         mp3 = MP3('resampled/' + filename , ID3=EasyID3)
         try:
             title = mp3["title"][0]
@@ -462,15 +464,15 @@ for audiobook_part in audiobook_parts:
         chapter_number += 1
 
     chapters_file.close()
-    if audiobook_parts.size > 1:
-        print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
+    if len(audiobook_parts) > 1:
         print("---------------------------------------------------------")
+        print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
     audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
     part_number += 1
 
 # concatenate .mp3 files into big .mp3 and attach chapter meta info
 for audiobook_part in audiobook_parts:
-    if audiobook_parts.size > 1:
+    if len(audiobook_parts) > 1:
         print("\nCombining part .mp3 files into big one...\nEstimated duration of the part: {}".format(total_length_human, part_number))
         print("---------------------------------------------------------")
     else:
