@@ -493,10 +493,13 @@ for audiobook_part in audiobook_parts:
     audio = MP4("../output.part{:0>3}.mp4".format(part_number))
     if len(audiobook_parts) > 1:
         audio["\xa9nam"] = [album_title + " Part {}".format(part_number)]
+        audio["trkn"] = [(part_number, number_of_parts)]
     else:
         audio["\xa9nam"] = [album_title]
+    audio["\xa9alb"] = [album_title]    
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
+    audio["\xa9gen"] = ["Audiobook"]
 
     print("\nAdding audiobook cover image")
     # add album cover to the audiobook
