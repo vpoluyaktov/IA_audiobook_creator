@@ -480,18 +480,21 @@ for audiobook_part in audiobook_parts:
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
-#    subprocess.call(command.split(" "))
+    subprocess.call(command.split(" "))
 
     if len(audiobook_parts) > 1:
         print("\nConverting Part {} .mp3 to audiobook format".format(part_number))
     else:
         print("\nConverting .mp3 to audiobook format...")
     command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
-#    subprocess.call(command.split(" "))
+    subprocess.call(command.split(" "))
 
     # create tags, rename file
     audio = MP4("../output.part{:0>3}.mp4".format(part_number))
-    audio["\xa9nam"] = [album_title]
+    if len(audiobook_parts) > 1:
+        audio["\xa9nam"] = [album_title + " Part {}".format(part_number)]
+    else:
+        audio["\xa9nam"] = [album_title]
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
 
