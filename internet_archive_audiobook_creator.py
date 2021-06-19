@@ -480,17 +480,17 @@ for audiobook_part in audiobook_parts:
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
-    subprocess.call(command.split(" "))
+#    subprocess.call(command.split(" "))
 
     if len(audiobook_parts) > 1:
-        print("\nConverting Part {} .mp3 to audiobook format".format(part_number)))
+        print("\nConverting Part {} .mp3 to audiobook format".format(part_number))
     else:
         print("\nConverting .mp3 to audiobook format...")
     command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
-    subprocess.call(command.split(" "))
+#    subprocess.call(command.split(" "))
 
     # create tags, rename file
-    audio = MP4("../output.part{:0>3}.mp4",format(part_number))
+    audio = MP4("../output.part{:0>3}.mp4".format(part_number))
     audio["\xa9nam"] = [album_title]
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
@@ -510,14 +510,17 @@ for audiobook_part in audiobook_parts:
         audiobook_file_name = "{} - {}, Part {}.m4b".format(album_artist, album_title, part_number)
     else:
     	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title) 
-    os.rename("./output.part{:0>3}.mp4".format(part_number), audiobook_file_name)
-    #os.remove(""./output.part{:0>3}.acc".format(part_number)")
-    #os.remove(""./output.part{:0>3}.mp4".format(part_number)")
+    os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
+    #os.remove("../output.part{:0>3}.acc".format(part_number))
+    #os.remove("../output.part{:0>3}.mp4".format(part_number))
+    #os.remove("../chapters.part{:0>3}.mp4".format(part_number))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
     else:  
       print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
+
+    part_number += 1
 
 # clean up
 os.chdir("..")
