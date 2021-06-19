@@ -405,7 +405,7 @@ for file_name in mp3_file_names:
 
         audiobook_parts[part_number] = {}
         audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
-        audiobook_parts[part_number]['mp3_file_names'] = mp3_file_names
+        audiobook_parts[part_number]['mp3_file_names'] = part_audio_files
         audiobook_parts[part_number]['part_size'] = current_part_size
         
         part_number += 1
@@ -422,6 +422,7 @@ if number_of_parts > 1:
 # create a chapter files for each part
 print("\nCreating audiobook chapters")
 part_number = 1
+chapter_number = 1
 for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         print("\n{}. Part {}".format(album_title, part_number))
@@ -434,7 +435,7 @@ for audiobook_part in audiobook_parts:
     chapters_file.write("compatible_brands=isom\n")
     chapters_file.write("encoder=Lavf58.20.100\n")
 
-    chapter_number = 1
+    #chapter_number = 1
     chapter_start_time = 0
     total_part_size = 0
     total_part_length = 0
@@ -468,25 +469,28 @@ for audiobook_part in audiobook_parts:
         print("---------------------------------------------------------")
         print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
     audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
+    audiobook_parts[part_number]['part_length'] = total_part_length
     part_number += 1
 
 # concatenate .mp3 files into big .mp3 and attach chapter meta info
+part_number = 1
 for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
-        print("\nCombining part .mp3 files into big one...\nEstimated duration of the part: {}".format(total_length_human, part_number))
-        print("---------------------------------------------------------")
+        print("\nCombining Part {} .mp3 files into big one...\nEstimated duration of the part: {}".format(part_number, secs_to_hms(audiobook_parts[part_number]['part_length'])))
     else:
-        print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(total_length_human))
-    
-    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -ab {} -ar {} -acodec aac ../output.aac".format(BITRATE, SAMPLE_RATE)
+        print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
+    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
     subprocess.call(command.split(" "))
 
-    print("\nConverting .mp3 to audiobook format...")
-    command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.aac -i ../output.meta -map_metadata 1 -y -vn -acodec copy ../output.mp4"
+    if len(audiobook_parts) > 1:
+        print("\nConverting Part {} .mp3 to audiobook format".format(part_number)))
+    else:
+        print("\nConverting .mp3 to audiobook format...")
+    command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
     subprocess.call(command.split(" "))
 
     # create tags, rename file
-    audio = MP4("../output.mp4")
+    audio = MP4("../output.part{:0>3}.mp4",format(part_number))
     audio["\xa9nam"] = [album_title]
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
@@ -497,20 +501,26 @@ for audiobook_part in audiobook_parts:
         image_type = 14
     else:
         image_type = 13
-    data = open(os.path.join(item_id, album_cover), 'rb').read()
+    data = open(os.path.join(album_cover), 'rb').read()
     audio["covr"] = [MP4Cover(data, image_type)]
 
     audio.save()
 
-    audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
-    os.rename("output.mp4", audiobook_file_name)
-    #os.remove("../output.meta")
-    #os.remove("../output.aac")
+    if len(audiobook_parts) > 1:
+        audiobook_file_name = "{} - {}, Part {}.m4b".format(album_artist, album_title, part_number)
+    else:
+    	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title) 
+    os.rename("./output.part{:0>3}.mp4".format(part_number), audiobook_file_name)
+    #os.remove(""./output.part{:0>3}.acc".format(part_number)")
+    #os.remove(""./output.part{:0>3}.mp4".format(part_number)")
 
+    if len(audiobook_parts) > 1:
+      print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
+    else:  
+      print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
 
 # clean up
+os.chdir("..")
 #shutil.rmtree(item_id)
-
 os.chdir("..")
 
-print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
