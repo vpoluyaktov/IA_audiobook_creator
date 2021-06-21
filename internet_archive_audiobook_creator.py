@@ -24,6 +24,7 @@
 
 import os
 import time
+import math
 import sys
 import subprocess
 import signal
@@ -33,6 +34,7 @@ from requests.exceptions import HTTPError
 import shutil
 import internetarchive as ia
 import humanfriendly
+import humanfriendly.prompts
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
@@ -44,6 +46,7 @@ BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
 GAP_DURATION = 5 # Duration of a gaps between chapters
+part_size_human = "1 GB" # default audiobook part size
 
 search_condition = ""
 items = {}
@@ -179,13 +182,15 @@ while True:
         number_of_files = len(mp3_files)    
 
         # convert duration and size to human frendly format
-        total_length = secs_to_hms(total_length).split('.')[0]
-        total_size = humanfriendly.format_size(total_size)
+        total_length_human = secs_to_hms(total_length).split('.')[0]
+        total_size_human = humanfriendly.format_size(total_size)
 
         items[num] = {}
         items[num]['item'] = item
         items[num]['total_length'] = total_length
+        items[num]['total_length_human'] = total_length_human
         items[num]['total_size'] = total_size
+        items[num]['total_size_human'] = total_size_human
         items[num]['number_of_files'] = number_of_files
         items[num]['mp3_files'] = mp3_files
         items[num]['album_covers'] = album_covers
@@ -193,7 +198,7 @@ while True:
         items[num]['album_artist'] = album_artist
 
         print("{}:\t{} ({} file(s), duration: {}, size: {})".format(
-            num, item_title, number_of_files, total_length, total_size))
+            num, item_title, number_of_files, total_length_human, total_size_human))
 
     while True:
         try:
@@ -227,6 +232,9 @@ album_covers = items[item_number]['album_covers']
 album_description = item.item_metadata['metadata']['description']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
+total_length_human = items[item_number]['total_length_human']
+total_size = items[item_number]['total_size']
+total_size_human = items[item_number]['total_size_human']
 album_title = items[item_number]['album_title']
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
@@ -236,6 +244,7 @@ if (album_artist == ''):
 print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
 album_title = album_title.replace(album_artist + ' - ', '')
+album_artist = album_artist.replace('Old Time Radio Researchers Group', 'OTRR')
 
 try:
     album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
@@ -246,133 +255,23 @@ try:
 except EOFError as e:
     None
 
-print("\n\nDownloading item #{}:\t{} ({} files)".format(
-    item_number, item_title, number_of_files))
+part_size = humanfriendly.parse_size(part_size_human)
+if (total_size > part_size):
+    while True:
+        try:
+            number_of_parts = math.ceil(total_size / part_size) 
+            print("\nThe audiobook total size ({}) is bigger than default single part size ({}), so the book will be split into {} parts."
+                .format(total_size_human, part_size_human, number_of_parts)) 
+            if (humanfriendly.prompts.prompt_for_confirmation("Would you like to change default part size?", default=False)):
+                part_size_human = input("Enter new part size (Mb, Gb): ")
+                part_size = humanfriendly.parse_size(part_size_human)
+                part_size_human = humanfriendly.format_size(part_size) # reformat user input
+            else:
+                break       
+        except humanfriendly.InvalidSize as e:
+            print("ERROR: Wrong size specified. You can say for ex: 2 Gb, 0.5 Gb, 256 Mb, etc.")
 
-# clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
-os.chdir(output_dir)
-
-# downloading mp3 files
-file_num = 1
-for file in mp3_files:
-    file_title = file['title']
-    file_name = file['file_name']
-    file_size = file['size']
-    try:
-        print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
-        print("OK")
-        file_num += 1
-    except HTTPError as e:
-        if e.response.status_code == 403:
-            print("Access to this file is restricted.\nExiting")
-    except Exception as e:
-        print("Error Occurred downloading {}.\nExiting".format(e))
-
-
-# downloading images       
-print("\nDownloading album covers")
-for file in album_covers:
-    file_name = file   
-    try:
-        print("    {:74}".format(file_name + "..."), end =" ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
-        print("OK")
-    except HTTPError as e:
-        if e.response.status_code == 403:
-            print("Access to this file is restricted.\nExiting")
-    except Exception as e:
-        print("Error Occurred downloading {}.\nExiting".format(e))
-
-# go to download dir
-if (not os.path.exists(item_id)):
-    print("Nothing to do. Exiting...")
-    exit(1)
-
-os.chdir(item_id)
-os.mkdir('resampled')
-
-mp3_file_names = []
-for file in mp3_files:
-    mp3_file_names.append(file['file_name'])
-mp3_file_names.sort()
-
-# generated silence .mp3 to fill gaps between chapters
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
-
-
-print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
-mp3_list_file = open('audio_files.txt', 'w')
-file_num = 1
-mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
-for file_name in mp3_file_names:
-    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
-    print("OK")
-    mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
-    mp3_list_file.write("file 'resampled/gap.mp3'\n")
-    file_num += 1
-mp3_list_file.close()
-
-
-# create chapters file
-print("\nCreating audiobook chapters")
-chapters_file = open('../output.meta', 'w')
-chapters_file.write(";FFMETADATA1\n")
-chapters_file.write("major_brand=isom\n")
-chapters_file.write("minor_version=1\n")
-chapters_file.write("compatible_brands=isom\n")
-chapters_file.write("encoder=Lavf58.20.100\n")
-
-counter = 1
-chapter_start_time = 0
-for filename in mp3_file_names:
-    mp3 = MP3('resampled/' + filename , ID3=EasyID3)
-    try:
-        title = mp3["title"][0]
-        title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
-    except:
-        title = filename.replace('.mp3', '')
-    title = title.strip();
-    length = mp3.info.length
-    chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
-    
-    chapters_file.write("[CHAPTER]\n")
-    chapters_file.write("TIMEBASE=1/1000\n")
-    chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
-    chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
-    chapters_file.write("title={}\n".format(title))
-
-    chapter_start_time = chapter_end_time
-
-    print("Chapter {:>3} ({}): {}".format(counter, secs_to_hms(length).split('.')[0], title))
-    counter += 1
-
-chapters_file.close()
-
-# concatenate .mp3 files into big .mp3 and attach chapter meta info
-print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(total_length))
-command = 'ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i audio_files.txt -y -vn -ab {} -ar {} -acodec aac ../output.aac'.format(BITRATE, SAMPLE_RATE)
-subprocess.call(command.split(" "))
-
-print("\nConverting .mp3 to audiobook format...")
-command = 'ffmpeg -nostdin -loglevel fatal -stats -i ../output.aac -i ../output.meta -map_metadata 1 -y -vn -acodec copy ../output.mp4'
-subprocess.call(command.split(" "))
-
-os.chdir("..")
-
-# create tags, rename file
-audio = MP4("output.mp4")
-audio["\xa9nam"] = [album_title]
-audio["\xa9ART"] = [album_artist]
-audio["desc"] = [album_description]
-
-# Find album cover
-print("\nAdding audiobook cover image")
+# Check if the audiobook has album cover
 if (len(album_covers) == 0):
     print("\nNo cover image found for this item. Using default IA logo.")
     while (True):
@@ -402,6 +301,30 @@ if (len(album_covers) == 0):
                 print("Can't opent the file: {}".format(local_file_name))
         album_covers.append(local_file_name)
 
+
+print("\n\nDownloading item #{}:\t{} ({} files)".format(
+    item_number, item_title, number_of_files))
+
+# clean/create output dir
+if (os.path.exists(output_dir)):
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir)
+os.chdir(output_dir)
+
+# downloading images       
+print("\nDownloading album covers")
+for file in album_covers:
+    file_name = file   
+    try:
+        print("    {:74}".format(file_name + "..."), end =" ", flush=True)
+        result = ia.download(item_id, silent=True, files = file_name)
+        print("OK")
+    except HTTPError as e:
+        if e.response.status_code == 403:
+            print("Access to this file is restricted.\nExiting")
+    except Exception as e:
+        print("Error Occurred downloading {}.\nExiting".format(e))
+
 # find biggest cover image
 album_cover = ''
 max_cover_size = 0
@@ -411,24 +334,201 @@ for cover in album_covers:
         max_cover_size = cover_size
         album_cover = cover
 
-# add album cover to the audiobook
-if ".PNG" in cover.upper():
-    image_type = 14
-else:
-    image_type = 13
-data = open(os.path.join(item_id, album_cover), 'rb').read()
-audio["covr"] = [MP4Cover(data, image_type)]
 
-audio.save()
+# downloading mp3 files
+print("\nDownloading mp3 files")
+file_num = 1
+for file in mp3_files:
+    file_title = file['title']
+    file_name = file['file_name']
+    file_size = file['size']
+    try:
+        print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
+        result = ia.download(item_id, silent=True, files = file_name)
+        print("OK")
+        file_num += 1
+    except HTTPError as e:
+        if e.response.status_code == 403:
+            print("Access to this file is restricted.\nExiting")
+    except Exception as e:
+        print("Error Occurred downloading {}.\nExiting".format(e))
 
-audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
-os.rename("output.mp4", audiobook_file_name)
+# go to download dir
+if (not os.path.exists(item_id)):
+    print("Nothing to do. Exiting...")
+    exit(1)
+
+os.chdir(item_id)
+os.mkdir('resampled')
+
+mp3_file_names = []
+for file in mp3_files:
+    mp3_file_names.append(file['file_name'])
+mp3_file_names.sort()
+
+# generated silence .mp3 to fill gaps between chapters
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
+
+print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
+file_num = 1
+for file_name in mp3_file_names:
+    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
+    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    print("OK")
+    file_num += 1
+
+# recalculate total audiobook size, split the books on parts if needed and create chapters
+total_size = 0
+current_part_size = 0
+file_num = 1
+part_number = 1
+audiobook_parts = {}
+part_audio_files = []
+
+for file_name in mp3_file_names:
+    part_audio_files.append(file_name)
+    file_size = os.stat(file_name).st_size
+    current_part_size += file_size
+    total_size += file_size
+
+    if file_num == len(mp3_file_names) or current_part_size >= part_size:
+        # we have collected anought files for the audiobook part. 
+        # save the part mp3 list to a file
+        mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
+        mp3_list_file = open(mp3_list_file_name, 'w')
+        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+        for file_name in part_audio_files:
+                mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
+                mp3_list_file.write("file 'resampled/gap.mp3'\n")
+        mp3_list_file.close() 
+
+        audiobook_parts[part_number] = {}
+        audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
+        audiobook_parts[part_number]['mp3_file_names'] = part_audio_files
+        audiobook_parts[part_number]['part_size'] = current_part_size
+        
+        part_number += 1
+        current_part_size = 0
+        part_audio_files = []
+    file_num += 1
+mp3_list_file.close()
+
+number_of_parts = math.ceil(total_size / part_size) 
+if number_of_parts > 1:
+    total_size_human = humanfriendly.format_size(total_size)
+    print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))   
+
+# create a chapter files for each part
+print("\nCreating audiobook chapters")
+part_number = 1
+chapter_number = 1
+for audiobook_part in audiobook_parts:
+    if len(audiobook_parts) > 1:
+        print("\n{}. Part {}".format(album_title, part_number))
+        print("---------------------------------------------------------")
+    chapters_file_name = "../chapters.part{:0>3}".format(part_number)
+    chapters_file = open(chapters_file_name, 'w')
+    chapters_file.write(";FFMETADATA1\n")
+    chapters_file.write("major_brand=isom\n")
+    chapters_file.write("minor_version=1\n")
+    chapters_file.write("compatible_brands=isom\n")
+    chapters_file.write("encoder=Lavf58.20.100\n")
+
+    #chapter_number = 1
+    chapter_start_time = 0
+    total_part_size = 0
+    total_part_length = 0
+    part_audio_files = audiobook_parts[part_number]['mp3_file_names']
+    for filename in part_audio_files:
+        mp3 = MP3('resampled/' + filename , ID3=EasyID3)
+        try:
+            title = mp3["title"][0]
+            title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
+        except:
+            title = filename.replace('.mp3', '')
+        title = title.strip();
+        length = mp3.info.length
+        chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
+        file_size = os.stat(filename).st_size
+        
+        chapters_file.write("[CHAPTER]\n")
+        chapters_file.write("TIMEBASE=1/1000\n")
+        chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
+        chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
+        chapters_file.write("title={}\n".format(title))
+
+        chapter_start_time = chapter_end_time
+        print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(length).split('.')[0], title))
+        total_part_size += file_size
+        total_part_length += length
+        chapter_number += 1
+
+    chapters_file.close()
+    if len(audiobook_parts) > 1:
+        print("---------------------------------------------------------")
+        print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
+    audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
+    audiobook_parts[part_number]['part_length'] = total_part_length
+    part_number += 1
+
+# concatenate .mp3 files into big .mp3 and attach chapter meta info
+part_number = 1
+for audiobook_part in audiobook_parts:
+    if len(audiobook_parts) > 1:
+        print("\nProcessing Part {} from {}".format(part_number, number_of_parts))
+        print("---------------------------------------------------------")
+        print("\nCombining .mp3 files into big one...\nEstimated duration of the part: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
+    else:
+        print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
+    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
+    subprocess.call(command.split(" "))
+
+    print("\nConverting .mp3 to audiobook format...")
+    command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
+    subprocess.call(command.split(" "))
+
+    # create tags, rename file
+    audio = MP4("../output.part{:0>3}.mp4".format(part_number))
+    if len(audiobook_parts) > 1:
+        audio["\xa9nam"] = [album_title + ", Part {}".format(part_number)]
+        audio["trkn"] = [(part_number, number_of_parts)]
+    else:
+        audio["\xa9nam"] = [album_title]
+    audio["\xa9alb"] = [album_title]    
+    audio["\xa9ART"] = [album_artist]
+    audio["desc"] = [album_description]
+    audio["\xa9gen"] = ["Audiobook"]
+
+    print("\nAdding audiobook cover image")
+    # add album cover to the audiobook
+    if ".PNG" in album_cover.upper():
+        image_type = 14
+    else:
+        image_type = 13
+    data = open(os.path.join(album_cover), 'rb').read()
+    audio["covr"] = [MP4Cover(data, image_type)]
+
+    audio.save()
+
+    if len(audiobook_parts) > 1:
+        audiobook_file_name = "{} - {}, Part {}.m4b".format(album_artist, album_title, part_number)
+    else:
+    	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title) 
+    os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
+    os.remove("../output.part{:0>3}.acc".format(part_number))
+    os.remove("../output.part{:0>3}.mp4".format(part_number))
+    os.remove("../chapters.part{:0>3}.mp4".format(part_number))
+
+    if len(audiobook_parts) > 1:
+      print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
+    else:  
+      print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
+
+    part_number += 1
 
 # clean up
-shutil.rmtree(item_id)
-os.remove("output.meta")
-os.remove("output.aac")
-
+os.chdir("..")
+#shutil.rmtree(item_id)
 os.chdir("..")
 
-print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
