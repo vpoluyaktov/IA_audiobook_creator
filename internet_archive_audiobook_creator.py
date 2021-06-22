@@ -359,7 +359,6 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-#os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
@@ -367,16 +366,8 @@ for file in mp3_files:
 mp3_file_names.sort()
 
 # generated silence .mp3 to fill gaps between chapters
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
-
-print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
-file_num = 1
-for file_name in mp3_file_names:
-    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-#    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
-    print("OK")
-    file_num += 1
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
 
 # recalculate total audiobook size, split the books on parts if needed and create chapters
 total_size = 0
@@ -388,7 +379,7 @@ part_audio_files = []
 
 for file_name in mp3_file_names:
     part_audio_files.append(file_name)
-    file_size = os.stat("resampled/{}".format(file_name)).st_size
+    file_size = os.stat(file_name).st_size
     current_part_size += file_size
     total_size += file_size
 
@@ -397,10 +388,10 @@ for file_name in mp3_file_names:
         # save the part mp3 list to a file
         mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
         mp3_list_file = open(mp3_list_file_name, 'w')
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+        mp3_list_file.write("file 'half_of_gap.mp3'\n")
         for file_name in part_audio_files:
-                mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
-                mp3_list_file.write("file 'resampled/gap.mp3'\n")
+                mp3_list_file.write("file '{}'\n".format(file_name.replace("'","'\\''")))
+                mp3_list_file.write("file 'gap.mp3'\n")
         mp3_list_file.close() 
 
         audiobook_parts[part_number] = {}
@@ -441,7 +432,7 @@ for audiobook_part in audiobook_parts:
     total_part_length = 0
     part_audio_files = audiobook_parts[part_number]['mp3_file_names']
     for filename in part_audio_files:
-        mp3 = MP3('resampled/' + filename , ID3=EasyID3)
+        mp3 = MP3(filename , ID3=EasyID3)
         try:
             title = mp3["title"][0]
             title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
@@ -450,7 +441,7 @@ for audiobook_part in audiobook_parts:
         title = title.strip();
         length = mp3.info.length
         chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
-        file_size = os.stat("resampled/{}".format(filename)).st_size
+        file_size = os.stat(filename).st_size
         
         chapters_file.write("[CHAPTER]\n")
         chapters_file.write("TIMEBASE=1/1000\n")
@@ -481,7 +472,7 @@ for audiobook_part in audiobook_parts:
         print("\nCombining .mp3 files into big one...\nEstimated duration of the part: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
-    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
+    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
     subprocess.call(command.split(" "))
 
     print("\nConverting .mp3 to audiobook format...")
