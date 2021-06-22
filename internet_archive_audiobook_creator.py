@@ -516,9 +516,12 @@ for audiobook_part in audiobook_parts:
     else:
     	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title) 
     os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
-    os.remove("../output.part{:0>3}.acc".format(part_number))
-    os.remove("../output.part{:0>3}.mp4".format(part_number))
-    os.remove("../chapters.part{:0>3}.mp4".format(part_number))
+
+
+    # clean up
+    os.remove("../output.part{:0>3}.aac".format(part_number))
+    os.remove("../audio_files.part{:0>3}".format(part_number))
+    os.remove("../chapters.part{:0>3}".format(part_number))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
