@@ -306,9 +306,9 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+#if (os.path.exists(output_dir)):
+#    shutil.rmtree(output_dir)
+#os.mkdir(output_dir)
 os.chdir(output_dir)
 
 # downloading images       
@@ -344,7 +344,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+#        result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_num += 1
     except HTTPError as e:
@@ -359,7 +359,7 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-os.mkdir('resampled')
+#os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
@@ -374,7 +374,7 @@ print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 file_num = 1
 for file_name in mp3_file_names:
     print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+#    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     file_num += 1
 
@@ -388,7 +388,7 @@ part_audio_files = []
 
 for file_name in mp3_file_names:
     part_audio_files.append(file_name)
-    file_size = os.stat(file_name).st_size
+    file_size = os.stat("resampled/{}".format(file_name)).st_size
     current_part_size += file_size
     total_size += file_size
 
@@ -450,7 +450,7 @@ for audiobook_part in audiobook_parts:
         title = title.strip();
         length = mp3.info.length
         chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
-        file_size = os.stat(filename).st_size
+        file_size = os.stat("resampled/{}".format(filename)).st_size
         
         chapters_file.write("[CHAPTER]\n")
         chapters_file.write("TIMEBASE=1/1000\n")
