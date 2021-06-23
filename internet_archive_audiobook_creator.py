@@ -387,6 +387,16 @@ audiobook_parts = {}
 part_audio_files = []
 
 for file_name in mp3_file_names:
+    # check if the filename is safe (see ffmpeg doc)
+    unsafe_tuples = [('..', '.')]
+    for tuple in unsafe_tuples:
+        if file_name.find(tuple[0]) != -1:
+            unsafe_file_name = file_name
+            safe_file_name = file_name.replace(tuple[0], tuple[1])
+            # rename file
+            os.rename('resampled/' + unsafe_file_name, 'resampled/' + safe_file_name)
+            file_name = safe_file_name
+
     part_audio_files.append(file_name)
     file_size = os.stat("resampled/{}".format(file_name)).st_size
     current_part_size += file_size
@@ -478,7 +488,7 @@ for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         print("\nProcessing Part {} from {}".format(part_number, number_of_parts))
         print("---------------------------------------------------------")
-        print("\nCombining .mp3 files into big one...\nEstimated duration of the part: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
+        print("\Combining .mp3 files into big one...\nEstimated duration of the part: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
@@ -500,7 +510,7 @@ for audiobook_part in audiobook_parts:
     audio["desc"] = [album_description]
     audio["\xa9gen"] = ["Audiobook"]
 
-    print("\nAdding audiobook cover image")
+    print("Adding audiobook cover image")
     # add album cover to the audiobook
     if ".PNG" in album_cover.upper():
         image_type = 14
