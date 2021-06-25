@@ -23,7 +23,6 @@
 # brew install libmad
 
 import os
-import time
 import math
 import sys
 import subprocess
@@ -35,6 +34,7 @@ import shutil
 import internetarchive as ia
 import humanfriendly
 import humanfriendly.prompts
+import html2text
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
@@ -229,23 +229,39 @@ item = items[item_number]['item']
 item_id = item.identifier
 mp3_files = items[item_number]['mp3_files']
 album_covers = items[item_number]['album_covers'] 
-album_description = item.item_metadata['metadata']['description']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
 total_length_human = items[item_number]['total_length_human']
 total_size = items[item_number]['total_size']
 total_size_human = items[item_number]['total_size_human']
 album_title = items[item_number]['album_title']
+
+# convert html description to plain text
+album_description = item.item_metadata['metadata']['description']
+parser = html2text.HTML2Text()
+parser.ignore_links = True
+parser.ignore_emphasis = True
+parser.single_line_brake = True
+parser.ignore_tables = True
+album_description = parser.handle(album_description)
+
+# remove block quotes and extra empty lines from the album description
+while True:
+    album_description_original = album_description
+    album_description = re.sub('^> ', '',album_description)
+    album_description = re.sub('\n> ', '\n',album_description)
+    album_description = re.sub('\n>\n|\n \n', '\n\n',album_description)
+    album_description = re.sub('\n\n\n', '\n\n',album_description)
+    if album_description_original == album_description:
+        break
+
+# confirm audiobook title and author 
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
     album_artist = 'Internet Archive'
-
-
-print("\n")
 album_title = album_title.replace(' - Single Episodes', '')
 album_title = album_title.replace(album_artist + ' - ', '')
 album_artist = album_artist.replace('Old Time Radio Researchers Group', 'OTRR')
-
 try:
     album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
 except EOFError as e:
@@ -255,6 +271,7 @@ try:
 except EOFError as e:
     None
 
+# check if audiobook size is bigger than default part size and ask a user to adjust if needed
 part_size = humanfriendly.parse_size(part_size_human)
 if (total_size > part_size):
     while True:
