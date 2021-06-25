@@ -40,6 +40,7 @@ from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
 
+archive_org_url = "https://archive.org"
 output_dir = "output"
 
 BITRATE = "128k"
@@ -85,9 +86,13 @@ def hms_to_sec(hms_string):
         seconds= seconds*60 + float(part)
     return seconds
 
+
+print("\nInternet Archive audiobook creator script")
+
+
 while True:
     try:
-        search_condition = input("Enter search condition or 'x' to exit: ")
+        search_condition = input("\nEnter search condition or 'x' to exit: ")
     except EOFError as e:
         search_condition = ''
 
@@ -99,7 +104,17 @@ while True:
         continue
 
     # Don't forget to run 'ia configure' in your terminal before first start
-    search = ia.search_items("title:('{}') AND mediatype:(audio)".format(search_condition))
+    search_query = ""
+    if [ search_condition.find(archive_org_url + "/details/") != -1]:
+        item_id = search_condition.replace(archive_org_url + "/details/", '').split('/')[0]
+        search_query = "identifier:{} AND mediatype:(audio)".format(item_id)
+    else: 
+        search_query = "title:('{}') AND mediatype:(audio)".format(search_condition)  
+    search = ia.search_items(search_query)
+
+    if (not isinstance(search.num_found, int)):
+        print("IA failed to parse your request.\nTry to clarify the search condition")
+        continue
 
     if (search.num_found == 0):
         print("Nothing found.\nTry to clarify the search condition")
