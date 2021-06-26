@@ -105,7 +105,7 @@ while True:
 
     # Don't forget to run 'ia configure' in your terminal before first start
     search_query = ""
-    if [ search_condition.find(archive_org_url + "/details/") != -1]:
+    if (search_condition.find(archive_org_url + "/details/") != -1):
         item_id = search_condition.replace(archive_org_url + "/details/", '').split('/')[0]
         search_query = "identifier:{} AND mediatype:(audio)".format(item_id)
     else: 
