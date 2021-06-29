@@ -46,6 +46,7 @@ output_dir = "output"
 BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
+OUTPUT_MODE="stereo" # mono / stereo
 GAP_DURATION = 5 # Duration of a gaps between chapters
 part_size_human = "1 GB" # default audiobook part size
 
@@ -399,8 +400,8 @@ for file in mp3_files:
 mp3_file_names.sort()
 
 # generated silence .mp3 to fill gaps between chapters
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(GAP_DURATION, BITRATE, SAMPLE_RATE))
-os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(SAMPLE_RATE, OUTPUT_MODE, GAP_DURATION, BITRATE, SAMPLE_RATE))
+os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(SAMPLE_RATE, OUTPUT_MODE, GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
 
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 file_number = 1
@@ -439,10 +440,11 @@ for file_name in mp3_file_names:
         # save the part mp3 list to a file
         mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
         mp3_list_file = open(mp3_list_file_name, 'w')
-        # mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
         for file_name in part_audio_files:
                 mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
                 mp3_list_file.write("file 'resampled/gap.mp3'\n")
+        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")        
         mp3_list_file.close() 
 
         audiobook_parts[part_number] = {}
@@ -454,7 +456,6 @@ for file_name in mp3_file_names:
         current_part_size = 0
         part_audio_files = []
     file_number += 1
-mp3_list_file.close()
 
 number_of_parts = math.ceil(total_size / part_size) 
 if number_of_parts > 1:
@@ -492,11 +493,7 @@ for audiobook_part in audiobook_parts:
             title = filename.replace('.mp3', '')
         title = title.strip();
         length = mp3.info.length
-        if file_number == 1:
-            gap_duration = GAP_DURATION * 0.5
-        else:
-            gap_duration = GAP_DURATION * 0.995 # 0.5% adjustment 
-        chapter_end_time = (chapter_start_time + length + gap_duration)
+        chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.992)) # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
         file_size = os.stat("resampled/{}".format(filename)).st_size
         
         chapters_file.write("[CHAPTER]\n")
