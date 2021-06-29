@@ -369,16 +369,16 @@ for cover in album_covers:
 
 # downloading mp3 files
 print("\nDownloading mp3 files")
-file_num = 1
+file_number = 1
 for file in mp3_files:
     file_title = file['title']
     file_name = file['file_name']
     file_size = file['size']
     try:
-        print("{:6d}/{}: {:67}".format(file_num, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
+        print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
-        file_num += 1
+        file_number += 1
     except HTTPError as e:
         if e.response.status_code == 403:
             print("Access to this file is restricted.\nExiting")
@@ -403,17 +403,17 @@ os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_bann
 os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r=44100:cl=mono -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
 
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
-file_num = 1
+file_number = 1
 for file_name in mp3_file_names:
-    print("{:6d}/{}: {:67}".format(file_num, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
+    print("{:6d}/{}: {:67}".format(file_number, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
     os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
-    file_num += 1
+    file_number += 1
 
 # recalculate total audiobook size, split the books on parts if needed and create chapters
 total_size = 0
 current_part_size = 0
-file_num = 1
+file_number = 1
 part_number = 1
 audiobook_parts = {}
 part_audio_files = []
@@ -434,12 +434,12 @@ for file_name in mp3_file_names:
     current_part_size += file_size
     total_size += file_size
 
-    if file_num == len(mp3_file_names) or current_part_size >= part_size:
+    if file_number == len(mp3_file_names) or current_part_size >= part_size:
         # we have collected anought files for the audiobook part. 
         # save the part mp3 list to a file
         mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
         mp3_list_file = open(mp3_list_file_name, 'w')
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+        # mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
         for file_name in part_audio_files:
                 mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
                 mp3_list_file.write("file 'resampled/gap.mp3'\n")
@@ -453,7 +453,7 @@ for file_name in mp3_file_names:
         part_number += 1
         current_part_size = 0
         part_audio_files = []
-    file_num += 1
+    file_number += 1
 mp3_list_file.close()
 
 number_of_parts = math.ceil(total_size / part_size) 
@@ -478,6 +478,7 @@ for audiobook_part in audiobook_parts:
     chapters_file.write("encoder=Lavf58.20.100\n")
 
     #chapter_number = 1
+    file_number = 1
     chapter_start_time = 0
     total_part_size = 0
     total_part_length = 0
@@ -491,7 +492,11 @@ for audiobook_part in audiobook_parts:
             title = filename.replace('.mp3', '')
         title = title.strip();
         length = mp3.info.length
-        chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.995)) # 0.5% adjustment 
+        if file_number == 1:
+            gap_duration = GAP_DURATION * 0.5
+        else:
+            gap_duration = GAP_DURATION * 0.995 # 0.5% adjustment 
+        chapter_end_time = (chapter_start_time + length + gap_duration)
         file_size = os.stat("resampled/{}".format(filename)).st_size
         
         chapters_file.write("[CHAPTER]\n")
@@ -505,6 +510,7 @@ for audiobook_part in audiobook_parts:
         total_part_size += file_size
         total_part_length += length
         chapter_number += 1
+        file_number += 1
 
     chapters_file.close()
     if len(audiobook_parts) > 1:
