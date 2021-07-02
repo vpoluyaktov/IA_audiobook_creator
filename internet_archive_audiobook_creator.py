@@ -60,7 +60,7 @@ item = None
 def signal_handler(sig, frame):
     print('\nCtrl+C has been pressed. Exiting...')
     sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)    
+signal.signal(signal.SIGINT, signal_handler)
 
 def secs_to_hms(seconds):
     h, m, s, ms = 0, 0, 0, 0
@@ -109,8 +109,8 @@ while True:
     if (search_condition.find(archive_org_url + "/details/") != -1):
         item_id = search_condition.replace(archive_org_url + "/details/", '').split('/')[0]
         search_query = "identifier:{} AND mediatype:(audio)".format(item_id)
-    else: 
-        search_query = "title:('{}') AND mediatype:(audio)".format(search_condition)  
+    else:
+        search_query = "title:('{}') AND mediatype:(audio)".format(search_condition)
     search = ia.search_items(search_query)
 
     if (not isinstance(search.num_found, int)):
@@ -139,22 +139,22 @@ while True:
             restricted = 'Restricted'
         else:
             restricted = ''
-    
+
         mp3_files = []
         album_covers = []
         if (item.item_metadata['metadata'].get('title')):
             album_title = item.item_metadata['metadata']['title']
         else:
             album_title = ''
-        if (item.item_metadata['metadata'].get('artist')):    
+        if (item.item_metadata['metadata'].get('artist')):
             album_artist = item.item_metadata['metadata']['artist']
-        elif (item.item_metadata['metadata'].get('creator')):    
+        elif (item.item_metadata['metadata'].get('creator')):
             album_artist = item.item_metadata['metadata']['creator']
-        else: 
+        else:
             album_artist = ''
 
         # collect meta info for each file
-        format_list = ['16Kbps MP3', '24Kbps MP3', '32Kbps MP3', '40Kbps MP3', '48Kbps MP3', '56Kbps MP3', '64Kbps MP3', '80Kbps MP3', '96Kbps MP3', '112Kbps MP3', '128Kbps MP3', '144Kbps MP3', '160Kbps MP3', '224Kbps MP3', '256Kbps MP3', '320Kbps MP3', 'VBR MP3'] # format list ranged by priority 
+        format_list = ['16Kbps MP3', '24Kbps MP3', '32Kbps MP3', '40Kbps MP3', '48Kbps MP3', '56Kbps MP3', '64Kbps MP3', '80Kbps MP3', '96Kbps MP3', '112Kbps MP3', '128Kbps MP3', '144Kbps MP3', '160Kbps MP3', '224Kbps MP3', '256Kbps MP3', '320Kbps MP3', 'VBR MP3'] # format list ranged by priority
         for file in item.files:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
@@ -169,12 +169,12 @@ while True:
                         new_file_priority = format_list.index(file['format'])
                         if (new_file_priority > existing_file_priority):
                             # remove existing file from the list
-                            mp3_files.pop(existing_file_index)  
+                            mp3_files.pop(existing_file_index)
                         else:
                             keep_existing_file = True
-                        break    
-                    existing_file_index += 1   
-                if (not keep_existing_file):    
+                        break
+                    existing_file_index += 1
+                if (not keep_existing_file):
                     mp3_files.append({'title': file['title'], 'file_name' : file['name'], 'format': file['format'], 'size': float(file['size']), 'length': hms_to_sec(file['length'])})
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
@@ -186,16 +186,16 @@ while True:
                 album_artist = file['artist']
 
         # calculate item total size
-        total_size = 0.0                    
+        total_size = 0.0
         for file in mp3_files:
             total_size += file['size']
 
         # calculate item total length
-        total_length = 0.0                    
+        total_length = 0.0
         for file in mp3_files:
             total_length += file['length']
 
-        number_of_files = len(mp3_files)    
+        number_of_files = len(mp3_files)
 
         # convert duration and size to human frendly format
         total_length_human = secs_to_hms(total_length).split('.')[0]
@@ -221,10 +221,10 @@ while True:
             item_number = input("Enter item number for download, 's' for new search or 'x' to exit: ")
         except EOFError as e:
             item_number = ''
-        
+
         if (item_number == 'x' or item_number == 'X'):
             print("Bye")
-            exit(0)    
+            exit(0)
         if (item_number == 's' or item_number == 'S'):
             item_number = None
             break
@@ -244,7 +244,7 @@ item_number = int(item_number)
 item = items[item_number]['item']
 item_id = item.identifier
 mp3_files = items[item_number]['mp3_files']
-album_covers = items[item_number]['album_covers'] 
+album_covers = items[item_number]['album_covers']
 number_of_files = items[item_number]['number_of_files']
 total_length = items[item_number]['total_length']
 total_length_human = items[item_number]['total_length_human']
@@ -271,7 +271,7 @@ while True:
     if album_description_original == album_description:
         break
 
-# confirm audiobook title and author 
+# confirm audiobook title and author
 album_artist = items[item_number]['album_artist']
 if (album_artist == ''):
     album_artist = 'Internet Archive'
@@ -279,7 +279,7 @@ album_title = album_title.replace(' - Single Episodes', '')
 album_title = album_title.replace(album_artist + ' - ', '')
 album_artist = album_artist.replace('Old Time Radio Researchers Group', 'OTRR')
 try:
-    album_title = input("Audiobook Name [{}]: ".format(album_title)) or album_title
+    album_title = input("\nAudiobook Name [{}]: ".format(album_title)) or album_title
 except EOFError as e:
     None
 try:
@@ -292,47 +292,17 @@ part_size = humanfriendly.parse_size(part_size_human)
 if (total_size > part_size):
     while True:
         try:
-            number_of_parts = math.ceil(total_size / part_size) 
+            number_of_parts = math.ceil(total_size / part_size)
             print("\nThe audiobook total size ({}) is bigger than default single part size ({}), so the book will be split into {} parts."
-                .format(total_size_human, part_size_human, number_of_parts)) 
+                .format(total_size_human, part_size_human, number_of_parts))
             if (humanfriendly.prompts.prompt_for_confirmation("Would you like to change default part size?", default=False)):
                 part_size_human = input("Enter new part size (Mb, Gb): ")
                 part_size = humanfriendly.parse_size(part_size_human)
                 part_size_human = humanfriendly.format_size(part_size) # reformat user input
             else:
-                break       
+                break
         except humanfriendly.InvalidSize as e:
             print("ERROR: Wrong size specified. You can say for ex: 2 Gb, 0.5 Gb, 256 Mb, etc.")
-
-# Check if the audiobook has album cover
-if (len(album_covers) == 0):
-    print("\nNo cover image found for this item. Using default IA logo.")
-    while (True):
-        choice_number = input("You have two options:\n 1) Use default Internet Archive logo\n 2) Use some local picture file\n Your choice: ")
-
-        if (not choice_number.isnumeric() or int(choice_number) < 1 or int(choice_number) > 2):
-            print("Invalid choice number")
-            continue
-        else:
-            break
-
-    if (int(choice_number) == 1):
-        img_url = "https://archive.org/20/items/InternetArchiveLogo_201805/internet%20archive%20logo.jpg"
-        img_name = os.path.basename(img_url)
-        try:
-            request = requests.get(img_url, allow_redirects=True)
-            open(os.path.join(item_id, img_name), 'wb').write(request.content)
-            album_covers.append(img_name)
-        except Exception as e:
-            None
-    elif (int(choice_number) == 2):
-        while (True):
-            local_file_name = input("Enter full path to a picture file (.jpeg or .png): ")
-            if (any(re.findall(r'.jpg|.jpeg|.png', local_file_name, re.IGNORECASE)) and  os.path.isfile(local_file_name)):
-                break
-            else:
-                print("Can't opent the file: {}".format(local_file_name))
-        album_covers.append(local_file_name)
 
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
@@ -343,11 +313,12 @@ if (os.path.exists(output_dir)):
     shutil.rmtree(output_dir)
 os.mkdir(output_dir)
 os.chdir(output_dir)
+os.mkdir(item_id)
 
-# downloading images       
+# downloading images
 print("\nDownloading album covers")
 for file in album_covers:
-    file_name = file   
+    file_name = file
     try:
         print("    {:74}".format(file_name + "..."), end =" ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
@@ -367,6 +338,50 @@ for cover in album_covers:
         max_cover_size = cover_size
         album_cover = cover
 
+# Check if the audiobook has album cover
+if (len(album_covers) == 0):
+    print("No cover image found for this item.")
+    while (True):
+        choice_number = input("You have three options:\n 1) Use default Internet Archive logo\n 2) Use an image from Internet\n 3) Use local picture file\n Your choice: ")
+
+        if (not choice_number.isnumeric() or int(choice_number) < 1 or int(choice_number) > 3):
+            print("Invalid choice number")
+            continue
+        else:
+            break
+
+    if (int(choice_number) == 1):
+        img_url = "https://archive.org/20/items/InternetArchiveLogo_201805/internet%20archive%20logo.jpg"
+        img_name = os.path.basename(img_url)
+        try:
+            request = requests.get(img_url, allow_redirects=True)
+            open(os.path.join(item_id, img_name), 'wb').write(request.content)
+            album_cover = img_name
+        except Exception as e:
+            None
+    elif (int(choice_number) == 2):
+        while (True):
+            img_url = input("Enter a picture url (.jpeg or .png format): ")
+            img_name = os.path.basename(img_url)
+            try:
+                request = requests.get(img_url, allow_redirects=True)
+                open(os.path.join(item_id, img_name), 'wb').write(request.content)
+
+                if (any(re.findall(r'.jpg|.jpeg|.png', img_name, re.IGNORECASE)) and  os.path.isfile(os.path.join(item_id, img_name))):
+                    album_cover = img_name
+                    break
+                else:
+                    print("The file is not an .jpeg or .png image: {}".format(img_name))
+            except Exception as e:
+                print("Can't download the picture file: {}".format(e))
+    elif (int(choice_number) == 3):
+        while (True):
+            local_file_name = input("Enter full path to a picture file (.jpeg or .png format): ")
+            if (any(re.findall(r'.jpg|.jpeg|.png', local_file_name, re.IGNORECASE)) and  os.path.isfile(local_file_name)):
+                break
+            else:
+                print("Can't opent the file: {}".format(local_file_name))
+        album_cover = local_file_name
 
 # downloading mp3 files
 print("\nDownloading mp3 files")
@@ -436,7 +451,7 @@ for file_name in mp3_file_names:
     total_size += file_size
 
     if file_number == len(mp3_file_names) or current_part_size >= part_size:
-        # we have collected anought files for the audiobook part. 
+        # we have collected anought files for the audiobook part.
         # save the part mp3 list to a file
         mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
         mp3_list_file = open(mp3_list_file_name, 'w')
@@ -444,23 +459,23 @@ for file_name in mp3_file_names:
         for file_name in part_audio_files:
                 mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
                 mp3_list_file.write("file 'resampled/gap.mp3'\n")
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")        
-        mp3_list_file.close() 
+        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+        mp3_list_file.close()
 
         audiobook_parts[part_number] = {}
         audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
         audiobook_parts[part_number]['mp3_file_names'] = part_audio_files
         audiobook_parts[part_number]['part_size'] = current_part_size
-        
+
         part_number += 1
         current_part_size = 0
         part_audio_files = []
     file_number += 1
 
-number_of_parts = math.ceil(total_size / part_size) 
+number_of_parts = math.ceil(total_size / part_size)
 if number_of_parts > 1:
     total_size_human = humanfriendly.format_size(total_size)
-    print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))   
+    print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))
 
 # create a chapter files for each part
 print("\nCreating audiobook chapters")
@@ -491,11 +506,13 @@ for audiobook_part in audiobook_parts:
             title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
         except:
             title = filename.replace('.mp3', '')
+        if not title:
+            title = "Chapter {}".format(chapter_number)
         title = title.strip();
         length = mp3.info.length
         chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.992)) # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
         file_size = os.stat("resampled/{}".format(filename)).st_size
-        
+
         chapters_file.write("[CHAPTER]\n")
         chapters_file.write("TIMEBASE=1/1000\n")
         chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
@@ -540,7 +557,7 @@ for audiobook_part in audiobook_parts:
         audio["trkn"] = [(part_number, number_of_parts)]
     else:
         audio["\xa9nam"] = [album_title]
-    audio["\xa9alb"] = [album_title]    
+    audio["\xa9alb"] = [album_title]
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
     audio["\xa9gen"] = ["Audiobook"]
@@ -559,7 +576,7 @@ for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         audiobook_file_name = "{} - {}, Part {}.m4b".format(album_artist, album_title, part_number)
     else:
-    	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title) 
+    	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
     os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
 
 
@@ -570,7 +587,7 @@ for audiobook_part in audiobook_parts:
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
-    else:  
+    else:
       print("\nAudiobook created: output/{}\n".format(audiobook_file_name))
 
     part_number += 1
@@ -579,4 +596,3 @@ for audiobook_part in audiobook_parts:
 os.chdir("..")
 #shutil.rmtree(item_id)
 os.chdir("..")
-
