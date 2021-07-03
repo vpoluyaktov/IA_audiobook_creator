@@ -48,7 +48,7 @@ SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
 OUTPUT_MODE="stereo" # mono / stereo
 GAP_DURATION = 5 # Duration of a gaps between chapters
-part_size_human = "1 GB" # default audiobook part size
+part_size_human = "2 GB" # default audiobook part size
 
 search_condition = ""
 items = {}
@@ -421,6 +421,8 @@ os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -l
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 file_number = 1
 for file_name in mp3_file_names:
+    if os.path.dirname(file_name) and not os.path.exists(os.path.join('resampled', os.path.dirname(file_name))):
+        os.makedirs(os.path.join('resampled', os.path.dirname(file_name))) # create dir structure for complex file names
     print("{:6d}/{}: {:67}".format(file_number, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
     os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
