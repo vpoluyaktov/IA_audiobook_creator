@@ -392,7 +392,7 @@ for file in mp3_files:
     file_name = file['file_name']
     file_size = file['size']
     try:
-        print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_title + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
+        print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
         result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_number += 1
