@@ -29,6 +29,7 @@ import subprocess
 import signal
 import requests
 import re
+import chardet
 from requests.exceptions import HTTPError
 import shutil
 import internetarchive as ia
@@ -505,6 +506,15 @@ for audiobook_part in audiobook_parts:
         mp3 = MP3('resampled/' + filename , ID3=EasyID3)
         try:
             title = mp3["title"][0]
+            # try to repair bad ID3 tags encoding
+            try:
+                bytes= title.encode('iso-8859-1')
+                charset = chardet.detect(bytes)
+                if charset['confidence'] >= 0.9:
+                    codepage = charset['encoding']
+                    title = bytes.decode(codepage)
+            except:
+                pass
             title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
         except:
             title = filename.replace('.mp3', '')
