@@ -160,7 +160,7 @@ while True:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
                 existing_file_index = 0
-                keep_existing_file = False
+                add_new_file = True
                 if (not 'title' in file):
                     file['title'] = file['name']
 
@@ -171,11 +171,15 @@ while True:
                         if (new_file_priority > existing_file_priority):
                             # remove existing file from the list
                             mp3_files.pop(existing_file_index)
+                            add_new_file = True
+                        elif (new_file_priority == existing_file_priority):
+                            # most likely many files have the same title
+                            add_new_file = True
                         else:
-                            keep_existing_file = True
+                            add_new_file = False
                         break
                     existing_file_index += 1
-                if (not keep_existing_file):
+                if add_new_file:
                     mp3_files.append({'title': file['title'], 'file_name' : file['name'], 'format': file['format'], 'size': float(file['size']), 'length': hms_to_sec(file['length'])})
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
@@ -310,11 +314,11 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+# if (os.path.exists(output_dir)):
+#     shutil.rmtree(output_dir)
+# os.mkdir(output_dir)
 os.chdir(output_dir)
-os.mkdir(item_id)
+# os.mkdir(item_id)
 
 # downloading images
 print("\nDownloading album covers")
@@ -393,7 +397,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        #result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_number += 1
     except HTTPError as e:
@@ -408,7 +412,7 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-os.mkdir('resampled')
+# os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
@@ -425,11 +429,11 @@ for file_name in mp3_file_names:
     if os.path.dirname(file_name) and not os.path.exists(os.path.join('resampled', os.path.dirname(file_name))):
         os.makedirs(os.path.join('resampled', os.path.dirname(file_name))) # create dir structure for complex file names
     print("{:6d}/{}: {:67}".format(file_number, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    # os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     file_number += 1
 
-# recalculate total audiobook size, split the books on parts if needed and create chapters
+# recalculate total audiobook size, split the books on parts if needed
 total_size = 0
 current_part_size = 0
 file_number = 1
@@ -438,7 +442,7 @@ audiobook_parts = {}
 part_audio_files = []
 
 for file_name in mp3_file_names:
-    # check if the filename is safe (see ffmpeg doc)
+    # check if the filename is safe (see ffmpeg doc) and fix it if needed
     unsafe_tuples = [('..', '.')]
     for tuple in unsafe_tuples:
         if file_name.find(tuple[0]) != -1:
@@ -499,9 +503,11 @@ for audiobook_part in audiobook_parts:
     #chapter_number = 1
     file_number = 1
     chapter_start_time = 0
+    chapter_length = 0
     total_part_size = 0
     total_part_length = 0
     part_audio_files = audiobook_parts[part_number]['mp3_file_names']
+    chapter_title = ""
     for filename in part_audio_files:
         mp3 = MP3('resampled/' + filename , ID3=EasyID3)
         try:
@@ -521,21 +527,26 @@ for audiobook_part in audiobook_parts:
         if not title:
             title = "Chapter {}".format(chapter_number)
         title = title.strip();
+
         length = mp3.info.length
         chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.992)) # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
         file_size = os.stat("resampled/{}".format(filename)).st_size
 
-        chapters_file.write("[CHAPTER]\n")
-        chapters_file.write("TIMEBASE=1/1000\n")
-        chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
-        chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
-        chapters_file.write("title={}\n".format(title))
+        if (chapter_title != "" and chapter_title != title) or file_number == len(part_audio_files): # chapter changed or last file
+            chapters_file.write("[CHAPTER]\n")
+            chapters_file.write("TIMEBASE=1/1000\n")
+            chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
+            chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
+            chapters_file.write("title={}\n".format(chapter_title))
+            print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
+            chapter_length = 0
+            chapter_start_time = chapter_end_time
+            chapter_number += 1
 
-        chapter_start_time = chapter_end_time
-        print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(length).split('.')[0], title))
+        chapter_title = title
         total_part_size += file_size
+        chapter_length += length
         total_part_length += length
-        chapter_number += 1
         file_number += 1
 
     chapters_file.close()
@@ -593,9 +604,9 @@ for audiobook_part in audiobook_parts:
 
 
     # clean up
-    os.remove("../output.part{:0>3}.aac".format(part_number))
-    os.remove("../audio_files.part{:0>3}".format(part_number))
-    os.remove("../chapters.part{:0>3}".format(part_number))
+    # os.remove("../output.part{:0>3}.aac".format(part_number))
+    # os.remove("../audio_files.part{:0>3}".format(part_number))
+    # os.remove("../chapters.part{:0>3}".format(part_number))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
