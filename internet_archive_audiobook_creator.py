@@ -530,20 +530,20 @@ for audiobook_part in audiobook_parts:
         title = title.strip();
 
         # check if the chapter has changed
-        if chapter_title != "" and chapter_title != title: # chapter changed or last file
-            chapter_end_time += GAP_DURATION * 0.992 # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
+        if chapter_title != "" and chapter_title != title: # chapter changed
+            mp3_list_file.write("file 'resampled/gap.mp3'\n")
+            chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
             chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
             chapters_file.write("title={}\n".format(chapter_title))
-            mp3_list_file.write("file 'resampled/gap.mp3'\n")
             print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
             chapter_length = 0
             chapter_start_time = chapter_end_time
             chapter_number += 1
 
-        length = mp3.info.length
+        length = mp3.info.length * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -555,7 +555,7 @@ for audiobook_part in audiobook_parts:
         file_number += 1
 
     # last file TODO: simplify an exit of the loop
-    chapter_end_time += GAP_DURATION * 0.992 # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
+    chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
     chapters_file.write("[CHAPTER]\n")
     chapters_file.write("TIMEBASE=1/1000\n")
     chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
