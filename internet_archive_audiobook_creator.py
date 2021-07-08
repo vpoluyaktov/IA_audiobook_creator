@@ -458,19 +458,8 @@ for file_name in mp3_file_names:
     total_size += file_size
 
     if file_number == len(mp3_file_names) or current_part_size >= part_size:
-        # we have collected anought files for the audiobook part.
-        # save the part mp3 list to a file
-        mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
-        mp3_list_file = open(mp3_list_file_name, 'w')
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
-        for file_name in part_audio_files:
-                mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
-                mp3_list_file.write("file 'resampled/gap.mp3'\n")
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
-        mp3_list_file.close()
-
+        # we have collected enought files for the audiobook part.
         audiobook_parts[part_number] = {}
-        audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
         audiobook_parts[part_number]['mp3_file_names'] = part_audio_files
         audiobook_parts[part_number]['part_size'] = current_part_size
 
@@ -484,7 +473,7 @@ if number_of_parts > 1:
     total_size_human = humanfriendly.format_size(total_size)
     print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))
 
-# create a chapter files for each part
+# create a chapter files and audio files for each part
 print("\nCreating audiobook chapters")
 part_number = 1
 chapter_number = 1
@@ -492,8 +481,16 @@ for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         print("\n{}. Part {}".format(album_title, part_number))
         print("---------------------------------------------------------")
+
+    mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
+    audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
+    mp3_list_file = open(mp3_list_file_name, 'w')
+    mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+
     chapters_file_name = "../chapters.part{:0>3}".format(part_number)
+    audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
     chapters_file = open(chapters_file_name, 'w')
+
     chapters_file.write(";FFMETADATA1\n")
     chapters_file.write("major_brand=isom\n")
     chapters_file.write("minor_version=1\n")
@@ -503,13 +500,17 @@ for audiobook_part in audiobook_parts:
     #chapter_number = 1
     file_number = 1
     chapter_start_time = 0
+    chapter_end_time = 0
     chapter_length = 0
     total_part_size = 0
     total_part_length = 0
     part_audio_files = audiobook_parts[part_number]['mp3_file_names']
     chapter_title = ""
+
     for filename in part_audio_files:
         mp3 = MP3('resampled/' + filename , ID3=EasyID3)
+
+        # calculate a chapter title
         try:
             title = mp3["title"][0]
             # try to repair bad ID3 tags encoding
@@ -528,20 +529,24 @@ for audiobook_part in audiobook_parts:
             title = "Chapter {}".format(chapter_number)
         title = title.strip();
 
-        length = mp3.info.length
-        chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.992)) # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
-        file_size = os.stat("resampled/{}".format(filename)).st_size
-
-        if (chapter_title != "" and chapter_title != title) or file_number == len(part_audio_files): # chapter changed or last file
+        # check if the chapter has changed
+        if chapter_title != "" and chapter_title != title: # chapter changed or last file
+            chapter_end_time += GAP_DURATION * 0.992 # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
             chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
             chapters_file.write("title={}\n".format(chapter_title))
+            mp3_list_file.write("file 'resampled/gap.mp3'\n")
             print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
             chapter_length = 0
             chapter_start_time = chapter_end_time
             chapter_number += 1
+
+        length = mp3.info.length
+        chapter_end_time = chapter_end_time + length
+        file_size = os.stat("resampled/{}".format(filename)).st_size
+        mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
 
         chapter_title = title
         total_part_size += file_size
@@ -549,7 +554,19 @@ for audiobook_part in audiobook_parts:
         total_part_length += length
         file_number += 1
 
+    # last file TODO: simplify an exit of the loop
+    chapter_end_time += GAP_DURATION * 0.992 # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
+    chapters_file.write("[CHAPTER]\n")
+    chapters_file.write("TIMEBASE=1/1000\n")
+    chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
+    chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
+    chapters_file.write("title={}\n".format(chapter_title))
+    mp3_list_file.write("file 'resampled/gap.mp3'\n")
+    print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
+
     chapters_file.close()
+    mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+    mp3_list_file.close()
     if len(audiobook_parts) > 1:
         print("---------------------------------------------------------")
         print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
