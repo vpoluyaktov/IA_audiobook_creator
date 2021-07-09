@@ -93,7 +93,7 @@ def get_mp3_title(file_name):
         mp3 = MP3(file_name , ID3=EasyID3)
         title = mp3["title"][0]
     except:
-        title = filename.replace('.mp3', '')
+        title = os.path.basename(file_name).replace('.mp3', '')
     return title
 
 def get_mp3_length(file_name):
