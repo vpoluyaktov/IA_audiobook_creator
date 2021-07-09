@@ -88,6 +88,22 @@ def hms_to_sec(hms_string):
         seconds= seconds*60 + float(part)
     return seconds
 
+def get_mp3_title(file_name):
+    try:
+        mp3 = MP3(file_name , ID3=EasyID3)
+        title = mp3["title"][0]
+    except:
+        title = filename.replace('.mp3', '')
+    return title
+
+def get_mp3_length(file_name):
+    try:
+        mp3 = MP3(file_name , ID3=EasyID3)
+        length = mp3.info.length
+    except:
+        length = 0
+    return length
+
 
 print("\nInternet Archive audiobook creator script")
 
@@ -314,11 +330,11 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-# if (os.path.exists(output_dir)):
-#     shutil.rmtree(output_dir)
-# os.mkdir(output_dir)
+if (os.path.exists(output_dir)):
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir)
 os.chdir(output_dir)
-# os.mkdir(item_id)
+os.mkdir(item_id)
 
 # downloading images
 print("\nDownloading album covers")
@@ -397,7 +413,7 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        #result = ia.download(item_id, silent=True, files = file_name)
+        result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_number += 1
     except HTTPError as e:
@@ -412,7 +428,7 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-# os.mkdir('resampled')
+os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
@@ -429,7 +445,7 @@ for file_name in mp3_file_names:
     if os.path.dirname(file_name) and not os.path.exists(os.path.join('resampled', os.path.dirname(file_name))):
         os.makedirs(os.path.join('resampled', os.path.dirname(file_name))) # create dir structure for complex file names
     print("{:6d}/{}: {:67}".format(file_number, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    # os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     file_number += 1
 
@@ -473,7 +489,7 @@ if number_of_parts > 1:
     total_size_human = humanfriendly.format_size(total_size)
     print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))
 
-# create a chapter files and audio files for each part
+# create a chapter files and audio files list for each part
 print("\nCreating audiobook chapters")
 part_number = 1
 chapter_number = 1
@@ -505,32 +521,37 @@ for audiobook_part in audiobook_parts:
     total_part_size = 0
     total_part_length = 0
     part_audio_files = audiobook_parts[part_number]['mp3_file_names']
-    chapter_title = ""
 
+    # brake files into chapters
     for filename in part_audio_files:
-        mp3 = MP3('resampled/' + filename , ID3=EasyID3)
+        mp3_title = get_mp3_title('resampled/' + filename)
+        length = get_mp3_length('resampled/' + filename) * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        chapter_end_time = chapter_end_time + length
+        file_size = os.stat("resampled/{}".format(filename)).st_size
+        mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
+        total_part_size += file_size
+        chapter_length += length
+        total_part_length += length
 
-        # calculate a chapter title
-        try:
-            title = mp3["title"][0]
+        # if this is last file in the list or next file title is different from current one - finish the chapter
+        if file_number == len(part_audio_files) \
+            or mp3_title != get_mp3_title('resampled/' + part_audio_files[file_number]): # next file title
+            # chapter changed
             # try to repair bad ID3 tags encoding
             try:
-                bytes= title.encode('iso-8859-1')
+                bytes = mp3_title.encode('iso-8859-1')
                 charset = chardet.detect(bytes)
                 if charset['confidence'] >= 0.9:
                     codepage = charset['encoding']
-                    title = bytes.decode(codepage)
+                    chapter_title = bytes.decode(codepage)
             except:
                 pass
-            title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
-        except:
-            title = filename.replace('.mp3', '')
-        if not title:
-            title = "Chapter {}".format(chapter_number)
-        title = title.strip();
+            chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
 
-        # check if the chapter has changed
-        if chapter_title != "" and chapter_title != title: # chapter changed
+            if not chapter_title:
+                chapter_title = "Chapter {}".format(chapter_number)
+            chapter_title = chapter_title.strip();
+
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
             chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
             chapters_file.write("[CHAPTER]\n")
@@ -543,26 +564,7 @@ for audiobook_part in audiobook_parts:
             chapter_start_time = chapter_end_time
             chapter_number += 1
 
-        length = mp3.info.length * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
-        chapter_end_time = chapter_end_time + length
-        file_size = os.stat("resampled/{}".format(filename)).st_size
-        mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
-
-        chapter_title = title
-        total_part_size += file_size
-        chapter_length += length
-        total_part_length += length
         file_number += 1
-
-    # last file TODO: simplify an exit of the loop
-    chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
-    chapters_file.write("[CHAPTER]\n")
-    chapters_file.write("TIMEBASE=1/1000\n")
-    chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
-    chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
-    chapters_file.write("title={}\n".format(chapter_title))
-    mp3_list_file.write("file 'resampled/gap.mp3'\n")
-    print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
 
     chapters_file.close()
     mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
