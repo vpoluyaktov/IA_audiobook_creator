@@ -545,7 +545,7 @@ for audiobook_part in audiobook_parts:
                     codepage = charset['encoding']
                     chapter_title = bytes.decode(codepage)
             except:
-                pass
+                chapter_title = mp3_title
             chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
 
             if not chapter_title:
