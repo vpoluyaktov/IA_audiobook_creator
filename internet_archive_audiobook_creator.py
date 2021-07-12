@@ -538,14 +538,15 @@ for audiobook_part in audiobook_parts:
             or mp3_title != get_mp3_title('resampled/' + part_audio_files[file_number]): # next file title
             # chapter changed
             # try to repair bad ID3 tags encoding
+            chapter_title = mp3_title
             try:
                 bytes = mp3_title.encode('iso-8859-1')
                 charset = chardet.detect(bytes)
-                if charset['confidence'] >= 0.9:
+                if charset['confidence'] >= 0.8:
                     codepage = charset['encoding']
                     chapter_title = bytes.decode(codepage)
             except:
-                chapter_title = mp3_title
+                pass
             chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
 
             if not chapter_title:
