@@ -44,6 +44,16 @@ from mutagen.mp4 import MP4Cover
 archive_org_url = "https://archive.org"
 output_dir = "output"
 
+# debug feature-toggles
+PRE_CLEANUP = False
+CREATE_DIRS = False
+DOWNLOAD_IMAGES = False
+DOWNLOAD_MP3 = False
+RE_ENCODE_MP3 = True
+CONCATENATE_MP3 = True
+CONVERT_TO_MP4 = True
+POST_CLEANUP = False
+
 BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
@@ -106,7 +116,6 @@ def get_mp3_length(file_name):
 
 
 print("\nInternet Archive audiobook creator script")
-
 
 while True:
     try:
@@ -330,11 +339,12 @@ print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
 
 # clean/create output dir
-if (os.path.exists(output_dir)):
-    shutil.rmtree(output_dir)
-os.mkdir(output_dir)
+if PRE_CLEANUP:
+    if (os.path.exists(output_dir)):
+        shutil.rmtree(output_dir)
+if CREATE_DIRS:
+    os.makedirs(os.path.join(output_dir, item_id))
 os.chdir(output_dir)
-os.mkdir(item_id)
 
 # downloading images
 print("\nDownloading album covers")
@@ -342,7 +352,8 @@ for file in album_covers:
     file_name = file
     try:
         print("    {:74}".format(file_name + "..."), end =" ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        if DOWNLOAD_IMAGES:
+            result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
     except HTTPError as e:
         if e.response.status_code == 403:
@@ -413,7 +424,8 @@ for file in mp3_files:
     file_size = file['size']
     try:
         print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
-        result = ia.download(item_id, silent=True, files = file_name)
+        if DOWNLOAD_MP3:
+            result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
         file_number += 1
     except HTTPError as e:
@@ -428,7 +440,8 @@ if (not os.path.exists(item_id)):
     exit(1)
 
 os.chdir(item_id)
-os.mkdir('resampled')
+if CREATE_DIRS:
+    os.mkdir('resampled')
 
 mp3_file_names = []
 for file in mp3_files:
@@ -445,7 +458,8 @@ for file_name in mp3_file_names:
     if os.path.dirname(file_name) and not os.path.exists(os.path.join('resampled', os.path.dirname(file_name))):
         os.makedirs(os.path.join('resampled', os.path.dirname(file_name))) # create dir structure for complex file names
     print("{:6d}/{}: {:67}".format(file_number, len(mp3_file_names), file_name + '...'), end = " ", flush=True)
-    os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
+    if RE_ENCODE_MP3:
+        os.system('ffmpeg -nostdin -i "{}" -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/{}"'.format(file_name, BITRATE, SAMPLE_RATE, file_name))
     print("OK")
     file_number += 1
 
@@ -591,12 +605,14 @@ for audiobook_part in audiobook_parts:
         print("Combining .mp3 files into big one...\nEstimated duration of the part: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
-    command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
-    subprocess.call(command.split(" "))
+    if CONCATENATE_MP3:
+        command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
+        subprocess.call(command.split(" "))
 
     print("\nConverting .mp3 to audiobook format...")
-    command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
-    subprocess.call(command.split(" "))
+    if CONVERT_TO_MP4:
+        command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
+        subprocess.call(command.split(" "))
 
     # create tags, rename file
     audio = MP4("../output.part{:0>3}.mp4".format(part_number))
@@ -627,11 +643,11 @@ for audiobook_part in audiobook_parts:
     	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
     os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
 
-
     # clean up
-    # os.remove("../output.part{:0>3}.aac".format(part_number))
-    # os.remove("../audio_files.part{:0>3}".format(part_number))
-    # os.remove("../chapters.part{:0>3}".format(part_number))
+    if POST_CLEANUP:
+        os.remove("../output.part{:0>3}.aac".format(part_number))
+        os.remove("../audio_files.part{:0>3}".format(part_number))
+        os.remove("../chapters.part{:0>3}".format(part_number))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
