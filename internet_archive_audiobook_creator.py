@@ -88,6 +88,22 @@ def hms_to_sec(hms_string):
         seconds= seconds*60 + float(part)
     return seconds
 
+def get_mp3_title(file_name):
+    try:
+        mp3 = MP3(file_name , ID3=EasyID3)
+        title = mp3["title"][0]
+    except:
+        title = os.path.basename(file_name).replace('.mp3', '')
+    return title
+
+def get_mp3_length(file_name):
+    try:
+        mp3 = MP3(file_name , ID3=EasyID3)
+        length = mp3.info.length
+    except:
+        length = 0
+    return length
+
 
 print("\nInternet Archive audiobook creator script")
 
@@ -160,7 +176,7 @@ while True:
             if (file['format'] in format_list):
                 # check if there is a file with the same title but different bitrate. Keep highest bitrate only
                 existing_file_index = 0
-                keep_existing_file = False
+                add_new_file = True
                 if (not 'title' in file):
                     file['title'] = file['name']
 
@@ -171,11 +187,15 @@ while True:
                         if (new_file_priority > existing_file_priority):
                             # remove existing file from the list
                             mp3_files.pop(existing_file_index)
+                            add_new_file = True
+                        elif (new_file_priority == existing_file_priority):
+                            # most likely many files have the same title
+                            add_new_file = True
                         else:
-                            keep_existing_file = True
+                            add_new_file = False
                         break
                     existing_file_index += 1
-                if (not keep_existing_file):
+                if add_new_file:
                     mp3_files.append({'title': file['title'], 'file_name' : file['name'], 'format': file['format'], 'size': float(file['size']), 'length': hms_to_sec(file['length'])})
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
@@ -429,7 +449,7 @@ for file_name in mp3_file_names:
     print("OK")
     file_number += 1
 
-# recalculate total audiobook size, split the books on parts if needed and create chapters
+# recalculate total audiobook size, split the books on parts if needed
 total_size = 0
 current_part_size = 0
 file_number = 1
@@ -438,13 +458,18 @@ audiobook_parts = {}
 part_audio_files = []
 
 for file_name in mp3_file_names:
-    # check if the filename is safe (see ffmpeg doc)
-    unsafe_tuples = [('..', '.')]
-    for tuple in unsafe_tuples:
-        if file_name.find(tuple[0]) != -1:
+    # check if the filename is safe (see ffmpeg doc) and fix it if needed
+    unsafe_tuples = [('...', '.'), ('..', '.')]
             unsafe_file_name = file_name
-            safe_file_name = file_name.replace(tuple[0], tuple[1])
-            # rename file
+    intermediate_file_name = unsafe_file_name
+    for tuple in unsafe_tuples:
+        intermediate_file_name = intermediate_file_name.replace(tuple[0], tuple[1])
+    safe_file_name = intermediate_file_name
+    if unsafe_file_name != safe_file_name:
+        # rename file (create new dir if needed)
+        dir_name = os.path.join('resampled', os.path.dirname(safe_file_name))
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
             os.rename('resampled/' + unsafe_file_name, 'resampled/' + safe_file_name)
             file_name = safe_file_name
 
@@ -454,19 +479,8 @@ for file_name in mp3_file_names:
     total_size += file_size
 
     if file_number == len(mp3_file_names) or current_part_size >= part_size:
-        # we have collected anought files for the audiobook part.
-        # save the part mp3 list to a file
-        mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
-        mp3_list_file = open(mp3_list_file_name, 'w')
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
-        for file_name in part_audio_files:
-                mp3_list_file.write("file 'resampled/{}'\n".format(file_name.replace("'","'\\''")))
-                mp3_list_file.write("file 'resampled/gap.mp3'\n")
-        mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
-        mp3_list_file.close()
-
+        # we have collected enought files for the audiobook part.
         audiobook_parts[part_number] = {}
-        audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
         audiobook_parts[part_number]['mp3_file_names'] = part_audio_files
         audiobook_parts[part_number]['part_size'] = current_part_size
 
@@ -480,7 +494,7 @@ if number_of_parts > 1:
     total_size_human = humanfriendly.format_size(total_size)
     print("\nAdjusted audiobook total size is {}. The book will be split into {} parts.".format(total_size_human, number_of_parts))
 
-# create a chapter files for each part
+# create a chapter files and audio files list for each part
 print("\nCreating audiobook chapters")
 part_number = 1
 chapter_number = 1
@@ -488,8 +502,16 @@ for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         print("\n{}. Part {}".format(album_title, part_number))
         print("---------------------------------------------------------")
+
+    mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
+    audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
+    mp3_list_file = open(mp3_list_file_name, 'w')
+    mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+
     chapters_file_name = "../chapters.part{:0>3}".format(part_number)
+    audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
     chapters_file = open(chapters_file_name, 'w')
+
     chapters_file.write(";FFMETADATA1\n")
     chapters_file.write("major_brand=isom\n")
     chapters_file.write("minor_version=1\n")
@@ -499,46 +521,60 @@ for audiobook_part in audiobook_parts:
     #chapter_number = 1
     file_number = 1
     chapter_start_time = 0
+    chapter_end_time = 0
+    chapter_length = 0
     total_part_size = 0
     total_part_length = 0
     part_audio_files = audiobook_parts[part_number]['mp3_file_names']
+
+    # brake files into chapters
     for filename in part_audio_files:
-        mp3 = MP3('resampled/' + filename , ID3=EasyID3)
-        try:
-            title = mp3["title"][0]
+        mp3_title = get_mp3_title('resampled/' + filename)
+        length = get_mp3_length('resampled/' + filename) * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        chapter_end_time = chapter_end_time + length
+        file_size = os.stat("resampled/{}".format(filename)).st_size
+        mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
+        total_part_size += file_size
+        chapter_length += length
+        total_part_length += length
+
+        # if this is last file in the list or next file title is different from current one - finish the chapter
+        if file_number == len(part_audio_files) \
+            or mp3_title != get_mp3_title('resampled/' + part_audio_files[file_number]): # next file title
+            # chapter changed
             # try to repair bad ID3 tags encoding
+            chapter_title = mp3_title
             try:
-                bytes= title.encode('iso-8859-1')
+                bytes = mp3_title.encode('iso-8859-1')
                 charset = chardet.detect(bytes)
-                if charset['confidence'] >= 0.9:
+                if charset['confidence'] >= 0.8:
                     codepage = charset['encoding']
-                    title = bytes.decode(codepage)
+                    chapter_title = bytes.decode(codepage)
             except:
                 pass
-            title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
-        except:
-            title = filename.replace('.mp3', '')
-        if not title:
-            title = "Chapter {}".format(chapter_number)
-        title = title.strip();
-        length = mp3.info.length
-        chapter_end_time = (chapter_start_time + length + (GAP_DURATION * 0.992)) # 0.8% adjustment because ffmpeg doesn't produce exact gap duration
-        file_size = os.stat("resampled/{}".format(filename)).st_size
+            chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
 
-        chapters_file.write("[CHAPTER]\n")
-        chapters_file.write("TIMEBASE=1/1000\n")
-        chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
-        chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
-        chapters_file.write("title={}\n".format(title))
+            if not chapter_title:
+                chapter_title = "Chapter {}".format(chapter_number)
+            chapter_title = chapter_title.strip();
 
-        chapter_start_time = chapter_end_time
-        print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(length).split('.')[0], title))
-        total_part_size += file_size
-        total_part_length += length
-        chapter_number += 1
+            mp3_list_file.write("file 'resampled/gap.mp3'\n")
+            chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
+            chapters_file.write("[CHAPTER]\n")
+            chapters_file.write("TIMEBASE=1/1000\n")
+            chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
+            chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
+            chapters_file.write("title={}\n".format(chapter_title))
+            print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
+            chapter_length = 0
+            chapter_start_time = chapter_end_time
+            chapter_number += 1
+
         file_number += 1
 
     chapters_file.close()
+    mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
+    mp3_list_file.close()
     if len(audiobook_parts) > 1:
         print("---------------------------------------------------------")
         print("Part size: {}. Part length: {}".format( humanfriendly.format_size(total_part_size), secs_to_hms(total_part_length)))
@@ -593,9 +629,9 @@ for audiobook_part in audiobook_parts:
 
 
     # clean up
-    os.remove("../output.part{:0>3}.aac".format(part_number))
-    os.remove("../audio_files.part{:0>3}".format(part_number))
-    os.remove("../chapters.part{:0>3}".format(part_number))
+    # os.remove("../output.part{:0>3}.aac".format(part_number))
+    # os.remove("../audio_files.part{:0>3}".format(part_number))
+    # os.remove("../chapters.part{:0>3}".format(part_number))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
