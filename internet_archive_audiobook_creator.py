@@ -459,12 +459,17 @@ part_audio_files = []
 
 for file_name in mp3_file_names:
     # check if the filename is safe (see ffmpeg doc) and fix it if needed
-    unsafe_tuples = [('..', '.')]
-    for tuple in unsafe_tuples:
-        if file_name.find(tuple[0]) != -1:
+    unsafe_tuples = [('...', '.'), ('..', '.')]
             unsafe_file_name = file_name
-            safe_file_name = file_name.replace(tuple[0], tuple[1])
-            # rename file
+    intermediate_file_name = unsafe_file_name
+    for tuple in unsafe_tuples:
+        intermediate_file_name = intermediate_file_name.replace(tuple[0], tuple[1])
+    safe_file_name = intermediate_file_name
+    if unsafe_file_name != safe_file_name:
+        # rename file (create new dir if needed)
+        dir_name = os.path.join('resampled', os.path.dirname(safe_file_name))
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
             os.rename('resampled/' + unsafe_file_name, 'resampled/' + safe_file_name)
             file_name = safe_file_name
 
