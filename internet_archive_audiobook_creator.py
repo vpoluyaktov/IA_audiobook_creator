@@ -460,7 +460,7 @@ part_audio_files = []
 for file_name in mp3_file_names:
     # check if the filename is safe (see ffmpeg doc) and fix it if needed
     unsafe_tuples = [('...', '.'), ('..', '.')]
-            unsafe_file_name = file_name
+    unsafe_file_name = file_name
     intermediate_file_name = unsafe_file_name
     for tuple in unsafe_tuples:
         intermediate_file_name = intermediate_file_name.replace(tuple[0], tuple[1])
