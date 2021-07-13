@@ -45,10 +45,10 @@ archive_org_url = "https://archive.org"
 output_dir = "output"
 
 # debug feature-toggles
-PRE_CLEANUP = False
-CREATE_DIRS = False
-DOWNLOAD_IMAGES = False
-DOWNLOAD_MP3 = False
+PRE_CLEANUP = True
+CREATE_DIRS = True
+DOWNLOAD_IMAGES = True
+DOWNLOAD_MP3 = True
 RE_ENCODE_MP3 = True
 CONCATENATE_MP3 = True
 CONVERT_TO_MP4 = True
