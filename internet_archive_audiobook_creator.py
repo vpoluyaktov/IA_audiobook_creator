@@ -472,7 +472,7 @@ audiobook_parts = {}
 part_audio_files = []
 
 for file_name in mp3_file_names:
-    # check if the filename is safe (see ffmpeg doc) and fix it if needed
+    # check if the filename is "safe" (see ffmpeg doc) and fix it if needed
     unsafe_tuples = [('...', '.'), ('..', '.')]
     unsafe_file_name = file_name
     intermediate_file_name = unsafe_file_name
@@ -484,8 +484,8 @@ for file_name in mp3_file_names:
         dir_name = os.path.join('resampled', os.path.dirname(safe_file_name))
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-            os.rename('resampled/' + unsafe_file_name, 'resampled/' + safe_file_name)
-            file_name = safe_file_name
+        os.rename('resampled/' + unsafe_file_name, 'resampled/' + safe_file_name)
+        file_name = safe_file_name
 
     part_audio_files.append(file_name)
     file_size = os.stat("resampled/{}".format(file_name)).st_size
