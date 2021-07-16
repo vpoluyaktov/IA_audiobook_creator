@@ -9,6 +9,7 @@
 # pip install humanfriendly
 # pip install mutagen
 # pip install audioread
+# pip install python-magic
 
 # Linux (debian/ubuntu)
 # sudo apt-get install ffmpeg
@@ -36,6 +37,7 @@ import internetarchive as ia
 import humanfriendly
 import humanfriendly.prompts
 import html2text
+import magic
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
@@ -399,7 +401,15 @@ if (len(album_covers) == 0):
                 request = requests.get(img_url, allow_redirects=True)
                 open(os.path.join(item_id, img_name), 'wb').write(request.content)
 
-                if (any(re.findall(r'.jpg|.jpeg|.png', img_name, re.IGNORECASE)) and  os.path.isfile(os.path.join(item_id, img_name))):
+                # check if downloaded file is valid .jpeg or .png image
+                if (
+                    any(re.findall(r'.jpg|.jpeg|.png', img_name, re.IGNORECASE))
+                    and  os.path.isfile(os.path.join(item_id, img_name))
+                    and (
+                        magic.from_file(os.path.join(item_id, img_name), mime=True) == 'image/jpeg'
+                        or magic.from_file(os.path.join(item_id, img_name), mime=True) == 'image/png'
+                        )
+                    ):
                     album_cover = img_name
                     break
                 else:
