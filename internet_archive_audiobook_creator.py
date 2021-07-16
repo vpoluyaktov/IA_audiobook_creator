@@ -587,11 +587,11 @@ for audiobook_part in audiobook_parts:
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
             chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
-            chapters_file.write("\n[CHAPTER]\n")
-            chapters_file.write("TITLE={}\n".format(chapter_title))
+            chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
             chapters_file.write("END={}\n".format(int(chapter_end_time * 1000)))
+            chapters_file.write("title={}\n".format(chapter_title))
             print("Chapter {:>3} ({}): {}".format(chapter_number, secs_to_hms(chapter_length).split('.')[0], chapter_title))
             chapter_length = 0
             chapter_start_time = chapter_end_time
