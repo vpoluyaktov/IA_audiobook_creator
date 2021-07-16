@@ -336,6 +336,9 @@ if (total_size > part_size):
         except humanfriendly.InvalidSize as e:
             print("ERROR: Wrong size specified. You can say for ex: 2 Gb, 0.5 Gb, 256 Mb, etc.")
 
+EDIT_CHAPTER_NAMES=False
+if (humanfriendly.prompts.prompt_for_confirmation("\nWould you like to edit chapter names at the end of the book creation?", default=False)):
+    EDIT_CHAPTER_NAMES=True
 
 print("\n\nDownloading item #{}:\t{} ({} files)".format(
     item_number, item_title, number_of_files))
@@ -584,7 +587,7 @@ for audiobook_part in audiobook_parts:
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
             chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
-            chapters_file.write("[CHAPTER]\n")
+            chapters_file.write("\n[CHAPTER]\n")
             chapters_file.write("TITLE={}\n".format(chapter_title))
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
@@ -605,6 +608,14 @@ for audiobook_part in audiobook_parts:
     audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
     audiobook_parts[part_number]['part_length'] = total_part_length
     part_number += 1
+
+if EDIT_CHAPTER_NAMES:
+    print("\nNow you can edit chapter names. \nOpen the folowing file(s) in any text editor:")
+    part_number = 1
+    for audiobook_part in audiobook_parts:
+        print("\t{}".format(os.path.abspath(audiobook_parts[part_number]['chapters_file_name'])))
+        part_number += 1
+    input("\nPress <Enter> when you are done...")
 
 # concatenate .mp3 files into big .mp3 and attach chapter meta info
 part_number = 1
