@@ -56,6 +56,9 @@ CONCATENATE_MP3 = True
 CONVERT_TO_MP4 = True
 POST_CLEANUP = False
 
+# Experimental features. Use with caution
+COMBINE_CHAPTER_TITLES = True
+
 BITRATE = "128k"
 SAMPLE_RATE = "44100"
 BIT_DEPTH = "s16"
@@ -106,6 +109,12 @@ def get_mp3_title(file_name):
         title = mp3["title"][0]
     except:
         title = os.path.basename(file_name).replace('.mp3', '')
+
+    if COMBINE_CHAPTER_TITLES: # Experimental feature
+        reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', '')]
+        for tuple in reduce_tuples:
+            title = re.sub(tuple[0], tuple[1], title)
+
     return title
 
 def get_mp3_length(file_name):
@@ -557,7 +566,7 @@ for audiobook_part in audiobook_parts:
     # brake files into chapters
     for filename in part_audio_files:
         mp3_title = get_mp3_title('resampled/' + filename)
-        length = get_mp3_length('resampled/' + filename) * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        length = get_mp3_length('resampled/' + filename) * 0.99983 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -574,8 +583,10 @@ for audiobook_part in audiobook_parts:
             try:
                 bytes = mp3_title.encode('iso-8859-1')
                 charset = chardet.detect(bytes)
-                if charset['confidence'] >= 0.8:
+                if charset['confidence'] > 0.5:
                     codepage = charset['encoding']
+                    if codepage == 'MacCyrillic':
+                        codepage = 'windows-1251' # These two code pages are too similar, so let's prefer windows-1251
                     chapter_title = bytes.decode(codepage)
             except:
                 pass
@@ -679,5 +690,6 @@ for audiobook_part in audiobook_parts:
 
 # clean up
 os.chdir("..")
-#shutil.rmtree(item_id)
+if POST_CLEANUP:
+    shutil.rmtree(item_id)
 os.chdir("..")
