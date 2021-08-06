@@ -57,6 +57,7 @@ CONVERT_TO_MP4 = True
 POST_CLEANUP = False
 
 # Experimental features. Use with caution
+FIX_ID3_ENCODING = True
 COMBINE_CHAPTER_TITLES = True
 
 BITRATE = "128k"
@@ -109,6 +110,21 @@ def get_mp3_title(file_name):
         title = mp3["title"][0]
     except:
         title = os.path.basename(file_name).replace('.mp3', '')
+
+    if FIX_ID3_ENCODING:
+        # try to repair bad ID3 tags encoding
+        try:
+            bytes = title.encode('iso-8859-1')
+            charset = chardet.detect(bytes)
+            if charset['confidence'] > 0.8:
+                codepage = charset['encoding']
+                if codepage == 'MacCyrillic':
+                    codepage = 'windows-1251' # These two code pages are too similar, so let's prefer windows-1251
+            else:
+                codepage = 'windows-1251' # If not sure - use windows-1251 code page
+            title = bytes.decode(codepage)
+        except:
+            pass
 
     if COMBINE_CHAPTER_TITLES: # Experimental feature
         reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', '')]
@@ -566,7 +582,7 @@ for audiobook_part in audiobook_parts:
     # brake files into chapters
     for filename in part_audio_files:
         mp3_title = get_mp3_title('resampled/' + filename)
-        length = get_mp3_length('resampled/' + filename) * 0.99983 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        length = get_mp3_length('resampled/' + filename) * 0.99979 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -578,18 +594,7 @@ for audiobook_part in audiobook_parts:
         if file_number == len(part_audio_files) \
             or mp3_title != get_mp3_title('resampled/' + part_audio_files[file_number]): # next file title
             # chapter changed
-            # try to repair bad ID3 tags encoding
             chapter_title = mp3_title
-            try:
-                bytes = mp3_title.encode('iso-8859-1')
-                charset = chardet.detect(bytes)
-                if charset['confidence'] > 0.5:
-                    codepage = charset['encoding']
-                    if codepage == 'MacCyrillic':
-                        codepage = 'windows-1251' # These two code pages are too similar, so let's prefer windows-1251
-                    chapter_title = bytes.decode(codepage)
-            except:
-                pass
             chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
 
             if not chapter_title:
@@ -597,7 +602,7 @@ for audiobook_part in audiobook_parts:
             chapter_title = chapter_title.strip();
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
-            chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
+            chapter_end_time += GAP_DURATION # * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
