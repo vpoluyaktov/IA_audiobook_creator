@@ -582,7 +582,7 @@ for audiobook_part in audiobook_parts:
     # brake files into chapters
     for filename in part_audio_files:
         mp3_title = get_mp3_title('resampled/' + filename)
-        length = get_mp3_length('resampled/' + filename) * 0.99979 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        length = get_mp3_length('resampled/' + filename) * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -602,7 +602,7 @@ for audiobook_part in audiobook_parts:
             chapter_title = chapter_title.strip();
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
-            chapter_end_time += GAP_DURATION # * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
+            chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
