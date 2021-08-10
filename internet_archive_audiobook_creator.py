@@ -47,12 +47,12 @@ archive_org_url = "https://archive.org"
 output_dir = "output"
 
 # debug feature-toggles
-PRE_CLEANUP = True
-CREATE_DIRS = True
+PRE_CLEANUP = False
+CREATE_DIRS = False
 DOWNLOAD_IMAGES = True
-DOWNLOAD_MP3 = True
-RE_ENCODE_MP3 = True
-CONCATENATE_MP3 = True
+DOWNLOAD_MP3 = False
+RE_ENCODE_MP3 = False
+CONCATENATE_MP3 = False
 CONVERT_TO_MP4 = True
 POST_CLEANUP = False
 
@@ -66,6 +66,8 @@ BIT_DEPTH = "s16"
 OUTPUT_MODE="stereo" # mono / stereo
 GAP_DURATION = 5 # Duration of a gaps between chapters
 part_size_human = "2 GB" # default audiobook part size
+
+MP3_DURATION_ADJUSTMENT = (1 - 0.00018)  # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
 
 search_condition = ""
 items = {}
@@ -490,6 +492,9 @@ mp3_file_names.sort()
 os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(SAMPLE_RATE, OUTPUT_MODE, GAP_DURATION, BITRATE, SAMPLE_RATE))
 os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/half_of_gap.mp3"'.format(SAMPLE_RATE, OUTPUT_MODE, GAP_DURATION / 2, BITRATE, SAMPLE_RATE))
 
+# adjust GAP_DURATION because ffmpeg doesn't produce exact mp3 length
+GAP_DURATION = get_mp3_length("resampled/gap.mp3")
+
 print("\nRe-encoding .mp3 files all to the same bitrate and sample rate...")
 file_number = 1
 for file_name in mp3_file_names:
@@ -582,7 +587,7 @@ for audiobook_part in audiobook_parts:
     # brake files into chapters
     for filename in part_audio_files:
         mp3_title = get_mp3_title('resampled/' + filename)
-        length = get_mp3_length('resampled/' + filename) * 0.9999428 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+        length = get_mp3_length('resampled/' + filename) * MP3_DURATION_ADJUSTMENT
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -602,7 +607,7 @@ for audiobook_part in audiobook_parts:
             chapter_title = chapter_title.strip();
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
-            chapter_end_time += GAP_DURATION * 1.0082 # 0.82% adjustment because ffmpeg doesn't produce exact gap duration
+            chapter_end_time += GAP_DURATION * MP3_DURATION_ADJUSTMENT
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
