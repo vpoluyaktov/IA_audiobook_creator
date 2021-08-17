@@ -67,9 +67,10 @@ OUTPUT_MODE="stereo" # mono / stereo
 GAP_DURATION = 5 # Duration of a gaps between chapters
 part_size_human = "2 GB" # default audiobook part size
 
-MP3_DURATION_ADJUSTMENT = -2  # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
+# small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
 # if you hear the end of previous chapter at the beginning of new one - slightly increase the value of this parameter
 # if new chapter sound starts too early - decrease the value
+MP3_DURATION_ADJUSTMENT = -2
 
 search_condition = ""
 items = {}
