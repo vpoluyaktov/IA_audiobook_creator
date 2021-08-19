@@ -70,7 +70,7 @@ part_size_human = "2 GB" # default audiobook part size
 # small adjustment (don't ask me why - just noticed mutagen returns slighly incorrect value)
 # if you hear the end of previous chapter at the beginning of new one - slightly increase the value of this parameter
 # if new chapter sound starts too early - decrease the value
-MP3_DURATION_ADJUSTMENT = -2
+MP3_DURATION_ADJUSTMENT = -50
 
 search_condition = ""
 items = {}
@@ -590,7 +590,7 @@ for audiobook_part in audiobook_parts:
     # brake files into chapters
     for filename in part_audio_files:
         mp3_title = get_mp3_title('resampled/' + filename)
-        length = get_mp3_length('resampled/' + filename) * (1 + MP3_DURATION_ADJUSTMENT / 100000)
+        length = get_mp3_length('resampled/' + filename) + (MP3_DURATION_ADJUSTMENT / 1000)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
         mp3_list_file.write("file 'resampled/{}'\n".format(filename.replace("'","'\\''")))
@@ -610,7 +610,7 @@ for audiobook_part in audiobook_parts:
             chapter_title = chapter_title.strip();
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
-            chapter_end_time += GAP_DURATION * (1 + MP3_DURATION_ADJUSTMENT / 100000)
+            chapter_end_time += GAP_DURATION + (MP3_DURATION_ADJUSTMENT / 1000)
             chapters_file.write("[CHAPTER]\n")
             chapters_file.write("TIMEBASE=1/1000\n")
             chapters_file.write("START={}\n".format(int(chapter_start_time * 1000)))
