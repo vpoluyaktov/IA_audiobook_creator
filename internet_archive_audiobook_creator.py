@@ -686,6 +686,12 @@ for audiobook_part in audiobook_parts:
         audiobook_file_name = "{} - {}, Part {}.m4b".format(album_artist, album_title, part_number)
     else:
     	audiobook_file_name = "{} - {}.m4b".format(album_artist, album_title)
+
+    # replace non-safe characters in the file name
+    unsafe_tuples = [('/','_')]
+    for tuple in unsafe_tuples:
+        audiobook_file_name = audiobook_file_name.replace(tuple[0], tuple[1])
+
     os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
 
     # clean up
