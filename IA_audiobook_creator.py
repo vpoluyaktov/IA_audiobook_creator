@@ -47,12 +47,12 @@ archive_org_url = "https://archive.org"
 output_dir = "output"
 
 # debug feature-toggles
-PRE_CLEANUP = True
-CREATE_DIRS = True
+PRE_CLEANUP = False
+CREATE_DIRS = False
 DOWNLOAD_IMAGES = True
-DOWNLOAD_MP3 = True
-RE_ENCODE_MP3 = True
-CONCATENATE_MP3 = True
+DOWNLOAD_MP3 = False
+RE_ENCODE_MP3 = False
+CONCATENATE_MP3 = False
 CONVERT_TO_MP4 = True
 POST_CLEANUP = False
 
@@ -211,6 +211,15 @@ while True:
         else:
             album_artist = ''
 
+        if (item.urls.details):
+            item_url = item.urls.details
+        else:
+            item_url = ''
+        if (item.item_metadata['metadata'].get('licenseurl')):
+            license_url = item.item_metadata['metadata']['licenseurl']
+        else:
+            license_url = ''
+
         # collect meta info for each file
         format_list = ['16Kbps MP3', '24Kbps MP3', '32Kbps MP3', '40Kbps MP3', '48Kbps MP3', '56Kbps MP3', '64Kbps MP3', '80Kbps MP3', '96Kbps MP3', '112Kbps MP3', '128Kbps MP3', '144Kbps MP3', '160Kbps MP3', '224Kbps MP3', '256Kbps MP3', '320Kbps MP3', 'VBR MP3'] # format list ranged by priority
         for file in item.files:
@@ -274,6 +283,8 @@ while True:
         items[num]['album_covers'] = album_covers
         items[num]['album_title'] = album_title
         items[num]['album_artist'] = album_artist
+        items[num]['item_url'] = item_url
+        items[num]['license_url'] = license_url
 
         print("{}:\t{} ({} file(s), duration: {}, size: {})".format(
             num, item_title, number_of_files, total_length_human, total_size_human))
@@ -313,6 +324,8 @@ total_length_human = items[item_number]['total_length_human']
 total_size = items[item_number]['total_size']
 total_size_human = items[item_number]['total_size_human']
 album_title = items[item_number]['album_title']
+item_url = items[item_number]['item_url']
+license_url = items[item_number]['license_url']
 
 # convert html description to plain text
 album_description = item.item_metadata['metadata']['description']
@@ -670,6 +683,9 @@ for audiobook_part in audiobook_parts:
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
     audio["\xa9gen"] = ["Audiobook"]
+    audio['\xa9cmt'] = "Downloaded from Internet Archive " + item_url
+    audio['\xa9too'] = "Converted to an audiobook by 'IA Audiobook Creator' https://github.com/vpoluyaktov/IA_audiobook_creator"
+    audio['cprt'] = license_url
 
     print("Adding audiobook cover image")
     # add album cover to the audiobook
