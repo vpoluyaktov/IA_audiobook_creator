@@ -47,12 +47,12 @@ archive_org_url = "https://archive.org"
 output_dir = "output"
 
 # debug feature-toggles
-PRE_CLEANUP = False
-CREATE_DIRS = False
+PRE_CLEANUP = True
+CREATE_DIRS = True
 DOWNLOAD_IMAGES = True
-DOWNLOAD_MP3 = False
-RE_ENCODE_MP3 = False
-CONCATENATE_MP3 = False
+DOWNLOAD_MP3 = True
+RE_ENCODE_MP3 = True
+CONCATENATE_MP3 = True
 CONVERT_TO_MP4 = True
 POST_CLEANUP = False
 
@@ -341,7 +341,7 @@ while True:
     album_description_original = album_description
     album_description = re.sub('^> ', '',album_description)
     album_description = re.sub('\n> ', '\n',album_description)
-    album_description = re.sub('\n>\n|\n \n', '\n\n',album_description)
+    album_description = re.sub('\n>\n|\n\s*\n', '\n\n',album_description)
     album_description = re.sub('\n\n\n', '\n\n',album_description)
     if album_description_original == album_description:
         break
@@ -677,15 +677,17 @@ for audiobook_part in audiobook_parts:
     if len(audiobook_parts) > 1:
         audio["\xa9nam"] = [album_title + ", Part {}".format(part_number)]
         audio["trkn"] = [(part_number, number_of_parts)]
+        audio['cpil'] = True
     else:
         audio["\xa9nam"] = [album_title]
     audio["\xa9alb"] = [album_title]
     audio["\xa9ART"] = [album_artist]
     audio["desc"] = [album_description]
     audio["\xa9gen"] = ["Audiobook"]
-    audio['\xa9cmt'] = "Downloaded from Internet Archive " + item_url
+    audio['\xa9cmt'] = "Downloaded from Internet Archive: " + item_url
     audio['\xa9too'] = "Converted to an audiobook by 'IA Audiobook Creator' https://github.com/vpoluyaktov/IA_audiobook_creator"
     audio['cprt'] = license_url
+    audio['purl'] = item_url
 
     print("Adding audiobook cover image")
     # add album cover to the audiobook
