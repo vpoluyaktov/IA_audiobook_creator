@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-# downloads audio files from Internet Archive collection and create a .m4b audiobook
+# This script downloads audio files from Internet Archive collection and create a .m4b audiobook
 # Inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers
 
 # REQUIREMENTS:
@@ -14,14 +14,15 @@
 # Linux (debian/ubuntu)
 # sudo apt-get install ffmpeg
 # sudo apt-get install internetarchive
-# ia configure (enter you archive.org username and password)
+# then run:
+# ia configure (enter your archive.org username and password)
 
 # MacOS:
 # brew install ffmpeg
-# brew install gpac
-# brew install mp4chaps
-# brew install mp4v2
-# brew install libmad
+# brew install internetarchive
+# then run:
+# ia configure (enter your archive.org username and password)
+
 
 import os
 import math
