@@ -502,7 +502,7 @@ if CREATE_DIRS:
 mp3_file_names = []
 for file in mp3_files:
     mp3_file_names.append(file['file_name'])
-mp3_file_names.sort()
+# mp3_file_names.sort()
 
 # generated silence .mp3 to fill gaps between chapters
 os.system('ffmpeg -nostdin -f lavfi -i anullsrc=r={}:cl={} -t {} -hide_banner -loglevel fatal -nostats -y -ab {} -ar {} -vn "resampled/gap.mp3"'.format(SAMPLE_RATE, OUTPUT_MODE, GAP_DURATION, BITRATE, SAMPLE_RATE))
@@ -685,7 +685,7 @@ for audiobook_part in audiobook_parts:
     audio["desc"] = [album_description]
     audio["\xa9gen"] = ["Audiobook"]
     audio['\xa9cmt'] = "Downloaded from Internet Archive: " + item_url
-    audio['\xa9too'] = "This audiobook created by 'IA Audiobook Creator' https://github.com/vpoluyaktov/IA_audiobook_creator"
+    audio['\xa9too'] = "This audiobook was created by 'IA Audiobook Creator' https://github.com/vpoluyaktov/IA_audiobook_creator"
     audio['cprt'] = license_url
     audio['purl'] = item_url
 
