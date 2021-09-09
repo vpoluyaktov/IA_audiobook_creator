@@ -91,14 +91,13 @@ Audiobook Author [OTRR]:
 Downloading item #1:    Murder By Experts - Single Episodes (15 files)
 
 Downloading album covers
-    OTRR_Certified_Murder_By_Experts.jpg...                                                         OK
-    OTRR_Certified_Murder_By_Experts_thumb.jpg...                                                   OK
+    OTRR_Certified_Murder_By_Experts.jpg...                                                    OK
+    OTRR_Certified_Murder_By_Experts_thumb.jpg...                                              OK
 
 Downloading mp3 files
-     1/15: Murder_by_Experts_49-06-13_001_Summer_Heat.mp3 (27.43 MB)...                             OK
-     2/15: Murder_by_Experts_49-07-04_004_Two_Coffins_To_Fill.mp3 (28.49 MB)...                     OK
-     3/15: Murder_by_Experts_49-07-11_005_Prescription_for_Murder.mp3 (28.54 MB)...                 OK
-     4/15: Murder_by_Experts_49-07-18_006_The_Creeper.mp3 (28.65 MB)...
+     1/15: Murder_by_Experts_49-06-13_001_Summer_Heat.mp3 (27.43 MB)...                        OK
+     2/15: Murder_by_Experts_49-07-04_004_Two_Coffins_To_Fill.mp3 (28.49 MB)...                OK
+     3/15: Murder_by_Experts_49-07-11_005_Prescription_for_Murder.mp3 (28.54 MB)...
 ```
 
 
