@@ -68,13 +68,15 @@ The script installation is simple: just clone the github repository (`git clone 
 ## Launching the script
 To lauchch the script and create an audiobook, first find a radio show or a book on archive.org you want to listen too.
 For example I want to create an audiobook from this show: https://archive.org/details/OTRR_Murder_By_Experts_Singles
+![Screen Shot 2021-09-09 at 13 55 43](https://user-images.githubusercontent.com/1992836/132761388-f267b94e-f93b-4134-93e3-3296e548fa3a.png)
 
 
 <br>
-Open a terminal, go to the directory where you downloaded the script and launch it by the followig command:
+Open a terminal, go to the directory where you downloaded the script and launch it by the followig command:  
 ```
-./IA_audiobook_creator.py
+./IA_audiobook_creator.py 
 ```
+
 Next, you need to provide a radio show or book name to the script. Also you can use a direct link to the item on archive.org.
 For my particular case it can be either `Murder By Experts - Single Episodes` or https://archive.org/details/OTRR_Murder_By_Experts_Singles <br>
 The script will ask you to confirm the item you want to download. You need to select an item number from the list.<br>
@@ -93,8 +95,9 @@ Enter search condition or 'x' to exit: Murder By Experts
 4:      Murder By Experts (0 file(s), duration: 00:00:00, size: 0.0 bytes)
 5:      Murder By Experts - Single Episodes (15 file(s), duration: 07:24:13, size: 426.48 MB)
 6:      Podcast #78 Murder By Experts (1 file(s), duration: 02:00:20, size: 57.78 MB)
-7:      MURDER BY EXPERTS / ALAN YOUNG / PRESENTING CHARLES BOYER / PRESS CLUB / SQUAD ROOM (1 file(s), duration: 02:32:41, size: 74 MB)
-8:      Murder By Experts "Dig Your Own Grave" (8-15-49) - Boxcars711 Old Time Radio Pod (1 file(s), duration: 00:29:51, size: 7.17 MB)
+7:      MURDER BY EXPERTS / ALAN YOUNG (1 file(s), duration: 02:32:41, size: 74 MB)
+8:      Murder By Experts "Dig Your Own Grave" (1 file(s), duration: 00:29:51, size: 7.17 MB)
+
 Enter item number for download, 's' for new search or 'x' to exit: 5
 ```
 Next prompt will allow you to change the audiobook name and author if you would like. Also you may want to edit the audio book chapters if you don't like names grabbed from the Internet Archive site:
@@ -118,7 +121,8 @@ Enter new part size (Mb, Gb): 3 Gb
 ```
 
 If the radio show or a book you want to download doesn't have a cover image on Internet Archive site, the script will ask you if you want to use default AI image, a local file or download some image from the Internet:
-```Downloading album covers
+```
+Downloading album covers
 No cover image found for this item.
 You have three options:
  1) Use default Internet Archive logo
@@ -127,11 +131,11 @@ You have three options:
  Your choice: 2
 Enter a picture url (.jpeg or .png format): https://i.pinimg.com/post-free-ads-antique-radio.jpg
 
-
 ```
 
 The script will start the download process. It may take a while depending on the audiobook size and your connection bandwidth, so you have to be patient. I usually run the script under tmux (or screen) on a cloud Ubuntu host launched in AWS or GCP. It allows me to close my Macbook any time I want without the script interruption and re-connect to the cloud host when the process is complete.
-```Downloading item #5:    Murder By Experts - Single Episodes (15 files)
+```
+Downloading item #5:    Murder By Experts - Single Episodes (15 files)
 
 Downloading album covers
     OTRR_Certified_Murder_By_Experts.jpg...                                                    OK
@@ -206,7 +210,14 @@ Adding audiobook cover image
 
 Audiobook created: output/OTRR - Murder By Experts.m4b
 ```
+You can use included upload.sh script to upload the audiobook to your Dropbox account (you need to install `dbxcli` utility for this).
 
+This is how the audiobook looks like in MacOS iBooks app 
+
+![Screen Shot 2021-09-09 at 13 24 18](https://user-images.githubusercontent.com/1992836/132757995-7d1583c1-6562-4d32-ab8b-4ee2238ba30f.png)
+
+and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id1138219998) app)
+![Untitled](https://user-images.githubusercontent.com/1992836/132761248-d29d3e2c-cf99-4b48-9f74-6361f9334d26.png)
 
 
 <br><br>
