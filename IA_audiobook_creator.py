@@ -252,7 +252,7 @@ while True:
             elif (file['format'] in ['JPEG', 'JPEG Thumb']):
                 album_covers.append(file['name'])
             elif ('MP3' in file['format']):
-                print("Skipping unknown MP3 format: {}".format(file['format']))
+                None # print("Skipping unknown MP3 format: {}".format(file['format']))
             if (file.get('album') and album_title == ''):
                 album_title = file['album']
             if (file.get('artist') and album_artist == ''):
@@ -276,6 +276,7 @@ while True:
 
         items[num] = {}
         items[num]['item'] = item
+        items[num]['item_title'] = item_title
         items[num]['total_length'] = total_length
         items[num]['total_length_human'] = total_length_human
         items[num]['total_size'] = total_size
@@ -316,6 +317,7 @@ while True:
 
 # fetch the item metadata
 item_number = int(item_number)
+item_title = items[item_number]['item_title']
 item = items[item_number]['item']
 item_id = item.identifier
 mp3_files = items[item_number]['mp3_files']
