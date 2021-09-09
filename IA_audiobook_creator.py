@@ -10,6 +10,7 @@
 # pip install mutagen
 # pip install audioread
 # pip install python-magic
+# pip install html2text
 
 # Linux (debian/ubuntu)
 # sudo apt-get install ffmpeg
@@ -400,7 +401,7 @@ print("\nDownloading album covers")
 for file in album_covers:
     file_name = file
     try:
-        print("    {:74}".format(file_name + "..."), end =" ", flush=True)
+        print("    {:95}".format(file_name + "..."), end =" ", flush=True)
         if DOWNLOAD_IMAGES:
             result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
@@ -480,7 +481,7 @@ for file in mp3_files:
     file_name = file['file_name']
     file_size = file['size']
     try:
-        print("{:6d}/{}: {:67}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
+        print("{:6d}/{}: {:88}".format(file_number, len(mp3_files), file_name + ' (' + humanfriendly.format_size(file_size) + ")..."), end = " ", flush=True)
         if DOWNLOAD_MP3:
             result = ia.download(item_id, silent=True, files = file_name)
         print("OK")
