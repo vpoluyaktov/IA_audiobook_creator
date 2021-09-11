@@ -1,21 +1,25 @@
 # Internet Archive Audiobook Creator
 
 ## Description
-There are thousands of free “old-time radio” shows, audiobooks, and lectures, available for download from the Internet Archive site (for example look at https://archive.org/details/oldtimeradio). You can listen to them right in your web browser but if you would like to listen to the shows on your mobile device it is not very convenient - in most cases, they are provided as a set of single .mp3 files. You have to download all the files to your mobile device, create a playlist, always remember the last file and a position you have listened to.<br><br>
-It would be much easier if there is a simple way to create an audiobook from a radio show or a book you like.<br><br>
-That is why I developed this Python script. Using the script, all you need is a show or a book name or a direct link on archive.org. It will download the book .mp3 files, recode all of them with the same bit rate, produce a list of chapters (you can edit it in the middle of the process), and then it will create an audiobook in .m4b format.<br><br>
+There are thousands of free “old-time radio” shows, audiobooks, and lectures, available for download from the Internet Archive site (for example look at https://archive.org/details/oldtimeradio). You can listen to them right in your web browser but if you would like to listen to the shows on your mobile device it is not very convenient - in most cases, they are provided as a set of single .mp3 files. You have to download all the files to your mobile device, create a playlist, always remember the last file and a position you have listened to.<br>
+
+It would be much easier if there is a simple way to create an audiobook from a radio show or a book you like.<br>
+
+That is why I developed this Python script. Using the script, all you need is a show or a book name or a direct link on archive.org. It will download the book .mp3 files, re-encode all of them with the same bit rate, produce a list of chapters (you can edit it in the middle of the process), and then it will create an audiobook in .m4b format.<br>
+
 This work was inspired by a code of Robin Camille Davis, Robert Orr and Benjamin Elbers. Thank you guys!
 <br><br>
 
 
 ## Hardware requirements and operation system
-There are no specific hardware requirements for this script. I usually run it on my Macbook or on 2 CPU 7.5 Gb AWS Ubuntu host. I've never had a chance to test it on a Windows computer, but it should run if you install all software dependencies (see below).
+There are no specific hardware requirements for this script. I usually run it on my Macbook or on a 2 CPU 7.5 Gb AWS Ubuntu host. I've never had a chance to test it on a Windows computer, but it should run if you install all software dependencies (see below). 
 <br><br>
 
 
 ## Dependencies
 
-This script is written in Python, in particular on Python 3. So, first of all, you need to ensure you have python3 installed on your computer. If you don't, search Google for how to install Python3 on your operation system.<br>
+This script is written in Python, in particular in Python 3. So, first of all, you need to ensure you have python 3 installed on your computer. If you don't, search Google for how to install Python3 on your operating system.<br>
+
 Next, you need to install some python modules. The easiest way to do it is to use pip (preferred installer program). Usually, pip utility is installed with Python together, but if you don't have pip installed on your computer, then Google it. Then just run the commands below:
 ```
 pip install internetarchive
@@ -72,14 +76,15 @@ For example I want to create an audiobook from this show: https://archive.org/de
 
 
 <br>
-Open a terminal, go to the directory where you downloaded the script and launch it by the followig command:  
+Open a terminal, go to the directory where you downloaded the script and launch it by the followig command:
+
 ```
-./IA_audiobook_creator.py 
-```
+ ./IA_audiobook_creator.py
+``` 
 
 Next, you need to provide a radio show or book name to the script. Also you can use a direct link to the item on archive.org.
 For my particular case it can be either `Murder By Experts - Single Episodes` or https://archive.org/details/OTRR_Murder_By_Experts_Singles <br>
-The script will ask you to confirm the item you want to download. You need to select an item number from the list.<br>
+The script will ask you to confirm the item you want to download. You need to select an item number from the list.
 
 ```
 ./IA_audiobook_creator.py
@@ -133,7 +138,7 @@ Enter a picture url (.jpeg or .png format): https://i.pinimg.com/post-free-ads-a
 
 ```
 
-The script will start the download process. It may take a while depending on the audiobook size and your connection bandwidth, so you have to be patient. I usually run the script under tmux (or screen) on a cloud Ubuntu host launched in AWS or GCP. It allows me to close my Macbook any time I want without the script interruption and re-connect to the cloud host when the process is complete.
+The script will start a download process. It may take a while, depending on the audiobook size and your connection bandwidth, so be patient. I usually run the script under tmux (or screen) on a cloud Ubuntu host launched in AWS or GCP. It allows me to close my Macbook any time without the script interruption and re-connect to the cloud host when the process is complete.
 ```
 Downloading item #5:    Murder By Experts - Single Episodes (15 files)
 
@@ -158,7 +163,7 @@ Downloading mp3 files
     14/15: Murder_by_Experts_50-04-24_046_Conspiracy.mp3 (28.92 MB)...                         OK
     15/15: Murder_by_Experts_50-05-22_050_Threes_a_Crowd.mp3 (28.39 MB)...                     OK
 ```
-Next stage is re-encoding downloaded .mp3 files with the same bit rate to avoid incorrect joining to a single audio file.
+Next stage is re-encoding downloaded .mp3 files with the same bit rate to avoid incorrect joining to a single audio file:
 ```
 Re-encoding .mp3 files all to the same bitrate and sample rate...
      1/15: Murder_by_Experts_49-06-13_001_Summer_Heat.mp3...                   OK
@@ -215,6 +220,7 @@ You can use included upload.sh script to upload the audiobook to your Dropbox ac
 This is how the audiobook looks like in MacOS iBooks app 
 
 ![Screen Shot 2021-09-09 at 13 24 18](https://user-images.githubusercontent.com/1992836/132757995-7d1583c1-6562-4d32-ab8b-4ee2238ba30f.png)
+<br><br><br>
 
 and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id1138219998) app)
 ![Untitled](https://user-images.githubusercontent.com/1992836/132761248-d29d3e2c-cf99-4b48-9f74-6361f9334d26.png)
@@ -223,4 +229,4 @@ and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id
 <br><br>
 
 ## Disclaimer
-Because the copyrights expired for most old-time radio shows and most of them are in Public Domain now, you can download and listen to them for free. But also there is some copyright content on the Internet Archive site. Please do respect others' legal rights and don't break a law. This script is just a tool, that helps you to create an audiobook. The author is not responsible for how you will use it in any way. This is your responsibility to obey the terms of an item copyright license.
+Because the copyrights expired for most old-time radio shows and most of them are in Public Domain now, you can download and listen to them for free. But also there is some copyright content on the Internet Archive site. Please do respect others' legal rights and don't break a law. This script is just a tool that helps you to create an audiobook. The author is not responsible for how you will use it in any way. This is your responsibility to obey the terms of an item copyright license.
