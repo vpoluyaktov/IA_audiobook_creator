@@ -423,7 +423,7 @@ for cover in album_covers:
         album_cover = cover
 
 # Check if the audiobook has album cover
-if (len(album_covers) == 0):
+if len(album_covers) == 0 or (len(album_covers) == 1 and album_covers[0] == '__ia_thumb.jpg'):
     print("No cover image found for this item.")
     while (True):
         choice_number = input("You have three options:\n 1) Use default Internet Archive logo\n 2) Use an image from Internet\n 3) Use local picture file\n Your choice: ")
