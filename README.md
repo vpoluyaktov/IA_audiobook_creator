@@ -71,8 +71,8 @@ The script installation is simple: just clone the github repository (`git clone 
 
 ## Launching the script
 To lauchch the script and create an audiobook, first find a radio show or a book on archive.org you want to listen too.
-For example I want to create an audiobook from this show: https://archive.org/details/OTRR_Murder_By_Experts_Singles
-![Screen Shot 2021-09-09 at 13 55 43](https://user-images.githubusercontent.com/1992836/132761388-f267b94e-f93b-4134-93e3-3296e548fa3a.png)
+For example I want to create an audiobook from this show: https://archive.org/details/OTRR_Murder_By_Experts_Singles<br>
+<img src="https://user-images.githubusercontent.com/1992836/132761388-f267b94e-f93b-4134-93e3-3296e548fa3a.png" width="800">
 
 
 <br>
@@ -219,11 +219,11 @@ You can use included upload.sh script to upload the audiobook to your Dropbox ac
 
 This is how the audiobook looks like in MacOS iBooks app 
 
-![Screen Shot 2021-09-09 at 13 24 18](https://user-images.githubusercontent.com/1992836/132757995-7d1583c1-6562-4d32-ab8b-4ee2238ba30f.png)
+<img src="https://user-images.githubusercontent.com/1992836/132757995-7d1583c1-6562-4d32-ab8b-4ee2238ba30f.png" width="800">
 <br><br><br>
 
-and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id1138219998) app)
-![Untitled](https://user-images.githubusercontent.com/1992836/132761248-d29d3e2c-cf99-4b48-9f74-6361f9334d26.png)
+and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id1138219998) app)<br>
+<img src="https://user-images.githubusercontent.com/1992836/132761248-d29d3e2c-cf99-4b48-9f74-6361f9334d26.png" width="600">
 
 
 <br><br>
