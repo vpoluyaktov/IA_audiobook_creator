@@ -134,7 +134,7 @@ def get_mp3_title(file_name):
             pass
 
     if COMBINE_CHAPTER_TITLES: # Experimental feature
-        reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', ''), (r'Фрагмент \d+$', '')]
+        reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', ''), (r'Фрагмент \d+$', ''), (r'\(?[Ч|ч]асть \d+\)?$', '')]
         for tuple in reduce_tuples:
             title = re.sub(tuple[0], tuple[1], title)
 
