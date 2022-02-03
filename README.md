@@ -1,9 +1,9 @@
 # Internet Archive Audiobook Creator
 
 ## Description
-There are thousands of free “old-time radio” shows, audiobooks, and lectures, available for download from the Internet Archive site (for example look at https://archive.org/details/oldtimeradio). You can listen to them right in your web browser but if you would like to listen to the shows on your mobile device it is not very convenient - in most cases, they are provided as a set of single .mp3 files. You have to download all the files to your mobile device, create a playlist, always remember the last file and a position you have listened to.<br>
+There are thousands of free “old-time radio” shows, audiobooks, and lectures, available for download from the Internet Archive site (for example  https://archive.org/details/oldtimeradio). You can listen to them right on your web browser but if you would like to listen to the shows on your mobile device it is not very convenient - in most cases, they are provided as a set of single .mp3 files. You have to download all the files to your mobile device, create a playlist, always remember the last file and position you have listened to.<br>
 
-It would be much easier if there is a simple way to create an audiobook from a radio show or a book you like.<br>
+It would be much easier if there was a simple way to create an audiobook from a radio show or a book you like.<br>
 
 That is why I developed this Python script. Using the script, all you need is a show or a book name or a direct link on archive.org. It will download the book .mp3 files, re-encode all of them with the same bit rate, produce a list of chapters (you can edit it in the middle of the process), and then it will create an audiobook in .m4b format.<br>
 
@@ -12,15 +12,15 @@ This work was inspired by a code of Robin Camille Davis, Robert Orr and Benjamin
 
 
 ## Hardware requirements and operation system
-There are no specific hardware requirements for this script. I usually run it on my Macbook or on a 2 CPU 7.5 Gb AWS Ubuntu host. I've never had a chance to test it on a Windows computer, but it should run if you install all software dependencies (see below). 
+There are no specific hardware requirements for this script. I usually run it on my Macbook or on a 2 CPU 7.5 Gb AWS Ubuntu host. I haven't had a chance to test it on a Windows computer, but it should run if you install all software dependencies (see below). 
 <br><br>
 
 
 ## Dependencies
 
-This script is written in Python, in particular in Python 3. So, first of all, you need to ensure you have python 3 installed on your computer. If you don't, search Google for how to install Python3 on your operating system.<br>
+This script is written in Python, in particular in Python 3. So, you need to ensure you have python 3 installed on your computer. If you don't, search Google for how to install Python3 on your operating system.<br>
 
-Next, you need to install some python modules. The easiest way to do it is to use pip (preferred installer program). Usually, pip utility is installed with Python together, but if you don't have pip installed on your computer, then Google it. Then just run the commands below:
+Next, you need to install some python modules. The easiest way to do it is to use pip (preferred installer program). Usually, the pip utility is installed with Python together, but if you don't have pip installed on your computer, then Google it. Then just run the commands below:
 ```
 pip install internetarchive
 pip install humanfriendly
@@ -203,7 +203,7 @@ Chapter  14 (00:30:07): Conspiracy
 Chapter  15 (00:29:34): Three's a Crowd
 
 ```
-Final stage is to combine single .mp3 files in to single one and create the audiobook .m4b file:
+Final stage is to combine the single .mp3 files in to a single one and create the audiobook .m4b file:
 ```
 Combining single .mp3 files into big one...
 Estimated duration of the book: 07:24:12.141
@@ -229,7 +229,7 @@ and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id
 <br><br>
 
 ## Disclaimer
-Because the copyrights expired for most old-time radio shows and most of them are in Public Domain now, you can download and listen to them for free. But also there is some copyright content on the Internet Archive site. Please do respect others' legal rights and don't break a law. This script is just a tool that helps you to create an audiobook. The author is not responsible for how you will use it in any way. This is your responsibility to obey the terms of an item copyright license.
+Because the copyrights expired for most old-time radio shows and most of them are in Public Domain now, you can download and listen to them for free. But also there is some copyright content on the Internet Archive site. Please do respect others' legal rights and don't break the law. This script is just a tool that helps you create an audiobook. The author is not responsible for how you use it in any way. This is your responsibility to obey the terms of an item copyright license.
 
 ## Бонус для русскоговорящих пользователей
 https://archive.org/details/audioboo_ru
