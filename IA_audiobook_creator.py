@@ -138,6 +138,8 @@ def get_mp3_title(file_name):
         for tuple in reduce_tuples:
             title = re.sub(tuple[0], tuple[1], title)
 
+    title = title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ').strip()
+
     return title
 
 def get_mp3_length(file_name):
@@ -606,7 +608,9 @@ for audiobook_part in audiobook_parts:
 
     # brake files into chapters
     for filename in part_audio_files:
-        mp3_title = get_mp3_title('resampled/' + filename)
+        mp3_title = get_mp3_title(filename)
+        if not mp3_title:
+            mp3_title = "Chapter {}".format(chapter_number)
         length = get_mp3_length('resampled/' + filename) + (MP3_DURATION_ADJUSTMENT / 1000)
         chapter_end_time = chapter_end_time + length
         file_size = os.stat("resampled/{}".format(filename)).st_size
@@ -617,14 +621,9 @@ for audiobook_part in audiobook_parts:
 
         # if this is last file in the list or next file title is different from current one - finish the chapter
         if file_number == len(part_audio_files) \
-            or mp3_title != get_mp3_title('resampled/' + part_audio_files[file_number]): # next file title
+            or mp3_title != get_mp3_title(part_audio_files[file_number]): # next file title
             # chapter changed
             chapter_title = mp3_title
-            chapter_title = chapter_title.replace(album_title, '').replace('  ', ' ').replace('- -', '-').replace('  ', ' ')
-
-            if not chapter_title:
-                chapter_title = "Chapter {}".format(chapter_number)
-            chapter_title = chapter_title.strip();
 
             mp3_list_file.write("file 'resampled/gap.mp3'\n")
             chapter_end_time += GAP_DURATION + (MP3_DURATION_ADJUSTMENT / 1000)
