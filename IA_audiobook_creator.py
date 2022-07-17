@@ -582,12 +582,12 @@ for audiobook_part in audiobook_parts:
         print("\n{}. Part {}".format(album_title, part_number))
         print("---------------------------------------------------------")
 
-    mp3_list_file_name = "../audio_files.part{:0>3}".format(part_number)
+    mp3_list_file_name = "audio_files.part{:0>3}".format(part_number)
     audiobook_parts[part_number]['mp3_list_file_name'] = mp3_list_file_name
     mp3_list_file = open(mp3_list_file_name, 'w')
     mp3_list_file.write("file 'resampled/half_of_gap.mp3'\n")
 
-    chapters_file_name = "../chapters.part{:0>3}".format(part_number)
+    chapters_file_name = "chapters.part{:0>3}".format(part_number)
     audiobook_parts[part_number]['chapters_file_name'] = chapters_file_name
     chapters_file = open(chapters_file_name, 'w')
 
@@ -667,16 +667,16 @@ for audiobook_part in audiobook_parts:
     else:
         print("\nCombining single .mp3 files into big one...\nEstimated duration of the book: {}".format(secs_to_hms(audiobook_parts[part_number]['part_length'])))
     if CONCATENATE_MP3:
-        command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac ../output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
+        command = "ffmpeg -nostdin -f concat -safe 0 -loglevel fatal -stats -i {} -y -vn -ab {} -ar {} -acodec aac output.part{:0>3}.aac".format(audiobook_parts[part_number]['mp3_list_file_name'],BITRATE, SAMPLE_RATE, part_number)
         subprocess.call(command.split(" "))
 
     print("\nConverting .mp3 to audiobook format...")
     if CONVERT_TO_MP4:
-        command = "ffmpeg -nostdin -loglevel fatal -stats -i ../output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy ../output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
+        command = "ffmpeg -nostdin -loglevel fatal -stats -i output.part{:0>3}.aac -i {} -map_metadata 1 -y -vn -acodec copy output.part{:0>3}.mp4".format(part_number, audiobook_parts[part_number]['chapters_file_name'], part_number)
         subprocess.call(command.split(" "))
 
     # create tags, rename file
-    audio = MP4("../output.part{:0>3}.mp4".format(part_number))
+    audio = MP4("output.part{:0>3}.mp4".format(part_number))
     if len(audiobook_parts) > 1:
         audio["\xa9nam"] = [album_title + ", Part {}".format(part_number)]
         audio["trkn"] = [(part_number, number_of_parts)]
@@ -713,13 +713,7 @@ for audiobook_part in audiobook_parts:
     for tuple in unsafe_tuples:
         audiobook_file_name = audiobook_file_name.replace(tuple[0], tuple[1])
 
-    os.rename("../output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
-
-    # clean up
-    if POST_CLEANUP:
-        os.remove("../output.part{:0>3}.aac".format(part_number))
-        os.remove("../audio_files.part{:0>3}".format(part_number))
-        os.remove("../chapters.part{:0>3}".format(part_number))
+    os.rename("output.part{:0>3}.mp4".format(part_number), "../{}".format(audiobook_file_name))
 
     if len(audiobook_parts) > 1:
       print("\nPart {} created: output/{}\n".format(part_number, audiobook_file_name))
