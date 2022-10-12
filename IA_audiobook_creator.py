@@ -134,7 +134,7 @@ def get_mp3_title(file_name):
             pass
 
     if COMBINE_CHAPTER_TITLES: # Experimental feature
-        reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', ''), (r'Фрагмент \d+$', ''), (r'\(?[Ч|ч]асть \d+\)?$', '')]
+        reduce_tuples = [(r'^(\d+)$', r'Chapter \1'), (r'(\d+_)+_?', ''), (r'Ôðàãìåíò \d+$', ''), (r'Фрагмент \d+$', ''), (r'\(?[Ч|ч]асть \d+\)?$', ''), (r'\x01','')]
         for tuple in reduce_tuples:
             title = re.sub(tuple[0], tuple[1], title)
 
@@ -476,6 +476,8 @@ if len(album_covers) == 0 or (len(album_covers) == 1 and album_covers[0] == '__i
             else:
                 print("Can't opent the file: {}".format(local_file_name))
         album_cover = local_file_name
+
+print(f"{album_cover} will be used as audiobook cover image")
 
 # downloading mp3 files
 print("\nDownloading mp3 files")
