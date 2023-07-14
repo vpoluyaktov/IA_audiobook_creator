@@ -230,6 +230,3 @@ and on my IPhone (I use [BookPlayer](https://apps.apple.com/us/app/bookplayer/id
 
 ## Disclaimer
 Because the copyrights expired for most old-time radio shows and most of them are in Public Domain now, you can download and listen to them for free. But also there is some copyright content on the Internet Archive site. Please do respect others' legal rights and don't break the law. This script is just a tool that helps you create an audiobook. The author is not responsible for how you use it in any way. This is your responsibility to obey the terms of an item copyright license.
-
-## Бонус для русскоговорящих пользователей
-https://archive.org/details/audioboo_ru
