@@ -1,5 +1,7 @@
 # Internet Archive Audiobook Creator
 
+## This repository has been archived and is no longer supported in favor of newest version of the Audiobook Builder https://github.com/vpoluyaktov/abb_ia
+
 ## Description
 There are thousands of free “old-time radio” shows, audiobooks, and lectures, available for download from the Internet Archive site (for example  https://archive.org/details/oldtimeradio). You can listen to them right on your web browser but if you would like to listen to the shows on your mobile device it is not very convenient - in most cases, they are provided as a set of single .mp3 files. You have to download all the files to your mobile device, create a playlist, always remember the last file and position you have listened to.<br>
 
